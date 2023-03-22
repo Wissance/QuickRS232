@@ -21,6 +21,10 @@ module quick_rs232 #(
     INPUT_BUFFER_LEN = 16  // 
 )
 (
+   // Global Signals
+   input wire clk,
+   input wire rst,
+   // RS232  Signals
    input wire rx,
    output wire tx,
    output wire rts,
