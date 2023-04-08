@@ -17,18 +17,38 @@
 // Additional Comments: 
 //
 //////////////////////////////////////////////////////////////////////////////////
+// Parity bits
+`define NO_PARITY   0
+`define EVEN_PARITY 1
+`define ODD_PARITY  2
+// Stop bits
+`define ONE_STOP_BIT           0
+`define ONE_AND_HALF_STOP_BITS 1
+`define TWO_STOP_BITS          2
+
 module quick_rs232 #(
-    INPUT_BUFFER_LEN = 16  // 
+    BYTE_LEN = 8,             // Возможные значения: - 5, 6, 7, 8, 9
+    PARITY = `EVEN_PARITY,
+    STOP_BITS = `ONE_STOP_BIT,
+    RECV_BUFFER_LEN = 16      // 
 )
 (
-   // Global Signals
-   input wire clk,
-   input wire rst,
-   // RS232  Signals
-   input wire rx,
-   output wire tx,
-   output wire rts,
-   input wire cts,
+    // Global Signals
+    input wire clk,
+    input wire rst,
+    // RS232  Signals
+    input wire rx,
+    output wire tx,
+    output wire rts,
+    input wire cts
 );
+
+always @(posedge clk)
+begin
+    if (rst == 1'b1)
+    begin
+        // clear all data
+    end
+end
 
 endmodule

@@ -34,3 +34,9 @@
 *.bak
 
 db/
+
+output_files/
+
+simulation/
+
+incremental_db/
