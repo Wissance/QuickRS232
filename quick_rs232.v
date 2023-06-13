@@ -18,9 +18,11 @@
 //
 //////////////////////////////////////////////////////////////////////////////////
 // Parity bits
-`define NO_PARITY   0
-`define EVEN_PARITY 1
-`define ODD_PARITY  2
+`define NO_PARITY    0
+`define EVEN_PARITY  1
+`define ODD_PARITY   2
+`define MARK_PARITY  3
+`define SPACE_PARITY 4
 // Stop bits
 `define ONE_STOP_BIT           0
 `define ONE_AND_HALF_STOP_BITS 1
@@ -32,11 +34,12 @@
 
 
 module quick_rs232 #(
-    DEFAULT_BYTE_LEN = 8,              // Возможные значения: - 5, 6, 7, 8, 9
-    DEFAULT_PARITY = `EVEN_PARITY,     // Дополнение до четн
-    DEFAULT_STOP_BITS = `ONE_STOP_BIT, // Число стоп-бит
-    DEFAULT_BAUD_RATE = 9600,          // Скороть обмена бод = бит/с
-    DEFAULT_RECV_BUFFER_LEN = 16       // Размер приемного буфера в байтах
+    CLK_FREQ = 50000000,               // clk input Frequency (Hz)
+    DEFAULT_BYTE_LEN = 8,              // RS232 byte length, available values are - 5, 6, 7, 8, 9
+    DEFAULT_PARITY = `EVEN_PARITY,     // Parity: No, Even, Odd, Mark or Space
+    DEFAULT_STOP_BITS = `ONE_STOP_BIT, // Stop bits number: 0, 1.5 or 2
+    DEFAULT_BAUD_RATE = 9600,          // Baud = Bit/s, 
+    DEFAULT_RECV_BUFFER_LEN = 16,      // Input (Rx) buffer size
     DEFAULT_FLOW_CONTROL = `NO_FLOW_CONTROL
 )
 (
@@ -68,6 +71,8 @@ localparam reg [3:0] DATA_BITS_EXCHANGE_STATE = 5;
 localparam reg [3:0] PARITY_BIT_EXCHANGE_STATE = 6;
 localparam reg [3:0] STOP_BITS_EXCHANGE_STATE = 7;
 localparam reg [3:0] SYNCH_STOP_EXCHANGE_STATE = 8;
+
+localparam reg [31:0] ticks_per_uart_bit =  CLK_FREQ / DEFAULT_BAUD_RATE;
 
 reg [3:0] tx_state;
 reg [3:0] rx_state;
@@ -151,7 +156,7 @@ begin
                 // FLOW control synchronization
                 if (DEFAULT_FLOW_CONTROL == `NO_FLOW_CONTROL)
                 begin
-                   state <= SYNCH_START_EXCHANGE_STATE;
+                   tx_state <= SYNCH_START_EXCHANGE_STATE;
                 end
                 else
                 begin
@@ -160,7 +165,7 @@ begin
                        // RTS + CTS
                        // Here we assume that RTS wired with RTS, CTS with CTS, no crossing RTS->CTS, CTS->RTS
                        // therefore is nothing to do in TX here
-                       state <= SYNCH_START_EXCHANGE_STATE;
+                       tx_state <= SYNCH_START_EXCHANGE_STATE;
                    end
                 end
             end
@@ -169,7 +174,7 @@ begin
                 // wait for data here and move to real tx when we have data
                 if (tx_data_ready == 1'b1)
                 begin
-                   state <= START_BIT_EXCHANGE_STATE;
+                   tx_state <= START_BIT_EXCHANGE_STATE;
                    tx_buffer <= tx_data;
                    tx_data_copied <= 1'b1;
                    tx_busy <= 1'b1;
