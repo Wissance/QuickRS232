@@ -208,7 +208,7 @@ begin
                 if (tx_bit_counter == TICKS_PER_UART_BIT)
                 begin
                    tx_bit_counter <= 0;
-                   tx_data_bit_counter <= tx_data_bit_counter + 1
+                   tx_data_bit_counter <= tx_data_bit_counter + 1;
                    if (tx_data_bit_counter == DEFAULT_BYTE_LEN)
                    begin
                        tx_state <= PARITY_BIT_EXCHANGE_STATE;
