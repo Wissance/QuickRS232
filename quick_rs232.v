@@ -37,7 +37,7 @@ module quick_rs232 #(
     DEFAULT_BYTE_LEN = 8,                   // RS232 byte length, available values are - 5, 6, 7, 8, 9
     DEFAULT_PARITY = `EVEN_PARITY,          // Parity: No, Even, Odd, Mark or Space
     DEFAULT_STOP_BITS = `ONE_STOP_BIT,      // Stop bits number: 0, 1.5 or 2
-    DEFAULT_BAUD_RATE = 9600,               // Baud = Bit/s, supported values: 4800, 9600, 115200
+    DEFAULT_BAUD_RATE = 9600,               // Baud = Bit/s, supported values: 2400, 4800, 9600, 19200, 38400, 57600, or 115200
     DEFAULT_RECV_BUFFER_LEN = 16,           // Input (Rx) buffer size
     DEFAULT_FLOW_CONTROL = `NO_FLOW_CONTROL // Flow control type: NO, HARDWARE
 )
@@ -71,7 +71,8 @@ localparam reg [3:0] PARITY_BIT_EXCHANGE_STATE = 6;
 localparam reg [3:0] STOP_BITS_EXCHANGE_STATE = 7;
 localparam reg [3:0] SYNCH_STOP_EXCHANGE_STATE = 8;
 
-localparam reg [31:0] TICKS_PER_UART_BIT =  CLK_FREQ / DEFAULT_BAUD_RATE;
+localparam reg [31:0] TICKS_PER_UART_BIT = CLK_FREQ / DEFAULT_BAUD_RATE;
+localparam reg [31:0] HALF_TICKS_PER_UART_BIT = TICKS_PER_UART_BIT / 2;
 
 reg [3:0] tx_state;
 reg [3:0] rx_state;
@@ -79,7 +80,9 @@ reg tx_rts;
 reg rx_rts;
 reg [DEFAULT_BYTE_LEN-1:0] tx_buffer;
 reg [31:0] tx_bit_counter;
-reg [3:0] tx_data_bit_counter;
+reg [3:0]  tx_data_bit_counter;
+reg tx_data_parity;
+integer i;
 
 assign rts = tx_rts || rx_rts; // Hardware Flow Controll
 
@@ -141,6 +144,7 @@ begin
         tx_bit_counter <= 0;
         tx <= 1'b1;                       // IDLE state
         tx_data_bit_counter <= 1'b0;      // Data bit counter = 0
+        tx_data_parity <= 1'b0;
     end
     else
     begin
@@ -155,6 +159,7 @@ begin
                     tx_busy <= 1'b0;
                     tx_bit_counter <= 0;
                     tx <= 1'b1;   // IDLE state
+                    tx_data_parity <= 1'b0;
                 end
                 else
                 begin
@@ -217,8 +222,48 @@ begin
             end
             PARITY_BIT_EXCHANGE_STATE:
             begin
-                tx_state <= STOP_BITS_EXCHANGE_STATE;
-                //todo(umv): implement parity send
+                case (DEFAULT_PARITY)
+                    `NO_PARITY:
+                    begin
+                        tx_state <= STOP_BITS_EXCHANGE_STATE;
+                    end
+                    `MARK_PARITY:
+                    begin
+                        tx <= 1'b1;
+                    end
+                    `SPACE_PARITY:
+                    begin
+                        tx <= 1'b0;
+                    end
+                    `EVEN_PARITY:
+                    begin
+                        tx_data_parity <= tx_buffer[0];
+                        for (i = 1; i < DEFAULT_BYTE_LEN; i = i + 1)
+                        begin
+                            tx_data_parity <= tx_data_parity | tx_buffer[i];
+                        end
+                        tx <= tx_data_parity == 1'b0 ? 1'b0: 1'b1;
+                    end
+                    `ODD_PARITY:
+                    begin
+                        tx_data_parity <= tx_buffer[0];
+                        for (i = 1; i < DEFAULT_BYTE_LEN; i = i + 1)
+                        begin
+                            tx_data_parity <= tx_data_parity | tx_buffer[i];
+                        end
+                        tx <= tx_data_parity == 1'b0 ? 1'b1: 1'b0;
+                    end
+                endcase
+                
+                if (DEFAULT_PARITY != `NO_PARITY)
+                begin
+                    tx_bit_counter <= tx_bit_counter + 1;
+                    if (tx_bit_counter == TICKS_PER_UART_BIT)
+                    begin
+                        tx_bit_counter <= 0;
+                        tx_state <= STOP_BITS_EXCHANGE_STATE;
+                    end
+                end
             end
             STOP_BITS_EXCHANGE_STATE:
             begin
