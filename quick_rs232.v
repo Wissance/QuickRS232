@@ -80,6 +80,7 @@ reg tx_rts;
 reg rx_rts;
 reg [DEFAULT_BYTE_LEN-1:0] tx_buffer;
 reg [31:0] tx_bit_counter;
+reg [31:0] tx_stop_bit_counter_limit;
 reg [3:0]  tx_data_bit_counter;
 reg tx_data_parity;
 integer i;
@@ -145,6 +146,7 @@ begin
         tx <= 1'b1;                       // IDLE state
         tx_data_bit_counter <= 1'b0;      // Data bit counter = 0
         tx_data_parity <= 1'b0;
+        tx_stop_bit_counter_limit <= 0;
     end
     else
     begin
@@ -160,6 +162,21 @@ begin
                     tx_bit_counter <= 0;
                     tx <= 1'b1;   // IDLE state
                     tx_data_parity <= 1'b0;
+                    case (DEFAULT_STOP_BITS)
+                        default:
+                        begin
+                            tx_stop_bit_counter_limit <= TICKS_PER_UART_BIT;
+                        end
+                        `ONE_AND_HALF_STOP_BITS:
+                        begin
+                            tx_stop_bit_counter_limit <= TICKS_PER_UART_BIT + HALF_TICKS_PER_UART_BIT;
+                        end
+                        `TWO_STOP_BITS:
+                        begin
+                            tx_stop_bit_counter_limit <= TICKS_PER_UART_BIT + TICKS_PER_UART_BIT;
+                        end
+                    endcase
+                    
                 end
                 else
                 begin
@@ -217,6 +234,7 @@ begin
                    if (tx_data_bit_counter == DEFAULT_BYTE_LEN)
                    begin
                        tx_state <= PARITY_BIT_EXCHANGE_STATE;
+                       tx_data_copied <= 1'b0;
                    end
                 end
             end
@@ -267,13 +285,18 @@ begin
             end
             STOP_BITS_EXCHANGE_STATE:
             begin
-                tx_state <= SYNCH_STOP_EXCHANGE_STATE;
-                //todo(umv): implement stop bits send
+                tx <= 1'b1;
+                tx_bit_counter <= tx_bit_counter + 1;
+                if (tx_bit_counter == tx_stop_bit_counter_limit)
+                begin
+                    tx_bit_counter <= 0;
+                    tx_state <= SYNCH_STOP_EXCHANGE_STATE;
+                end
             end
             SYNCH_STOP_EXCHANGE_STATE:
             begin
+                tx_busy <= 1'b0;
                 tx_state <= IDLE_EXCHANGE_STATE;
-                //todo(umv): implement byte transaction end ...
             end
         endcase
     end
