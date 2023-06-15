@@ -1,27 +1,27 @@
 //////////////////////////////////////////////////////////////////////////////////
-// Company:        Wissance (https://wissance.com)
-// Engineer:       EvilLord666 (Ushakov MV)
+// Company:             Wissance (https://wissance.com)
+// Engineer:            EvilLord666 (Ushakov MV - https://github.com/EvilLord666)
 // 
-// Create Date:    22/12/2022 
+// Create Date:         22.12.2022 
 // Design Name: 
-// Module Name:    quick_rs232
-// Project Name:   QuickRS232
-// Target Devices: Any
-// Tool versions:  Quartus Prime Lite 18.1
-// Description:    RS-232 interface with Hardware Flow Control Support
+// Module Name:         quick_rs232
+// Project Name:        QuickRS232
+// Target Devices:      Any
+// Tool versions:       Quartus Prime Lite 18.1
+// Description:         RS-232 interface with Hardware Flow Control Support
 //
-// Dependencies:   
+// Dependencies:        Depends on Fifo.h (taken from https://github.com/IzyaSoft/EasyHDLLib)
 //
-// Revision:      1.0   
+// Revision:            1.0   
 // Additional Comments: 
 //
 //////////////////////////////////////////////////////////////////////////////////
 // Parity bits
-`define NO_PARITY    0
-`define EVEN_PARITY  1
-`define ODD_PARITY   2
-`define MARK_PARITY  3
-`define SPACE_PARITY 4
+`define NO_PARITY              0
+`define EVEN_PARITY            1
+`define ODD_PARITY             2
+`define MARK_PARITY            3
+`define SPACE_PARITY           4
 // Stop bits
 `define ONE_STOP_BIT           0
 `define ONE_AND_HALF_STOP_BITS 1
@@ -30,35 +30,36 @@
 `define NO_FLOW_CONTROL        0
 `define CTS_RTS_FLOW_CONTROL   1
 // Baud Rate
+// todo(UMV) add consts ...
 
 
 module quick_rs232 #(
-    CLK_FREQ = 50000000,                    // clk input Frequency (Hz)
-    DEFAULT_BYTE_LEN = 8,                   // RS232 byte length, available values are - 5, 6, 7, 8, 9
-    DEFAULT_PARITY = `EVEN_PARITY,          // Parity: No, Even, Odd, Mark or Space
-    DEFAULT_STOP_BITS = `ONE_STOP_BIT,      // Stop bits number: 0, 1.5 or 2
-    DEFAULT_BAUD_RATE = 9600,               // Baud = Bit/s, supported values: 2400, 4800, 9600, 19200, 38400, 57600, or 115200
-    DEFAULT_RECV_BUFFER_LEN = 16,           // Input (Rx) buffer size
-    DEFAULT_FLOW_CONTROL = `NO_FLOW_CONTROL // Flow control type: NO, HARDWARE
+    CLK_FREQ = 50000000,                       // clk input Frequency (Hz)
+    DEFAULT_BYTE_LEN = 8,                      // RS232 byte length, available values are - 5, 6, 7, 8, 9
+    DEFAULT_PARITY = `EVEN_PARITY,             // Parity: No, Even, Odd, Mark or Space
+    DEFAULT_STOP_BITS = `ONE_STOP_BIT,         // Stop bits number: 0, 1.5 or 2
+    DEFAULT_BAUD_RATE = 9600,                  // Baud = Bit/s, supported values: 2400, 4800, 9600, 19200, 38400, 57600, or 115200
+    DEFAULT_RECV_BUFFER_LEN = 16,              // Input (Rx) buffer size
+    DEFAULT_FLOW_CONTROL = `NO_FLOW_CONTROL    // Flow control type: NO, HARDWARE
 )
 (
     // Global Signals
-    input wire clk,
-    input wire rst,
+    input wire clk,                            // clk is a clock 
+    input wire rst,                            // rst is a global reset system
     // External RS232 Interface
-    input wire rx,
-    output reg tx,
-    output wire rts,
-    input wire cts,
+    input wire rx,                             // rx  - receive  (1 bit line for receive data)
+    output reg tx,                             // tx  - transmit (1 bit line for transmit data)
+    input wire rts,                            // rts - request to send PC sets rts == 1'b1 that indicates that there is a data for receive
+    output reg cts,                            // cts - clear to send (devices sets cts to 1
     // Interaction with inner module
-    output reg [DEFAULT_BYTE_LEN-1:0] rx_data,
-    output reg rx_hshake_byte_received,
-    input wire rx_hshake_next_byte_ready,
+    input wire rx_read,                        // read next data portion __---______---_____
+    output wire [DEFAULT_BYTE_LEN-1:0] rx_data,// data portion
+    output reg rx_byte_received,               // generate short pulse when byre received __--___--___--___
     //
     input wire tx_transaction,                 // transaction if while tx_transaction == 1 we send data to PC
     input wire [DEFAULT_BYTE_LEN-1:0] tx_data, // data that should be send trough RS232
     input wire tx_data_ready,                  // required: setting to 1 when new data is ready to send
-    output reg tx_data_copied,                 // short pulse means that data was copied _--_____--______
+    output reg tx_data_copied,                 // short pulse means that data was copied _--_____--______--___
     output reg tx_busy                         // tx notes that data is sending via RS232 or RS232 module awaiting flow-control synch
 );
 
@@ -76,62 +77,104 @@ localparam reg [31:0] HALF_TICKS_PER_UART_BIT = TICKS_PER_UART_BIT / 2;
 
 reg [3:0] tx_state;
 reg [3:0] rx_state;
-reg tx_rts;
-reg rx_rts;
 reg [DEFAULT_BYTE_LEN-1:0] tx_buffer;
 reg [31:0] tx_bit_counter;
 reg [31:0] tx_stop_bit_counter_limit;
 reg [3:0]  tx_data_bit_counter;
 reg tx_data_parity;
+reg [DEFAULT_BYTE_LEN-1:0] rx_buffer;
+wire rx_data_buffer_full;
 integer i;
 
-assign rts = tx_rts || rx_rts; // Hardware Flow Controll
+supply1 vcc;
+supply0 gnd;
 
-/*
- * Блок для чтения (rx) данных из RS232
- */
+fifo #(.FIFO_SIZE(DEFAULT_RECV_BUFFER_LEN), .DATA_WIDTH(DEFAULT_BYTE_LEN)) 
+rx_data_buffer (.enable(vcc), .clear(rst), .push_clock(rx_byte_received), .pop_clock(rx_read), 
+                .in_data(rx_buffer), .out_data(rx_data), .pushed_last(rx_data_buffer_full));
+
+
+/*********************************************************************************
+ * Block for reading data from external buffer
+ **********************************************************************************/
+
+/**********************************************************************************
+ * Block for reading (rx) data from RS232 and store in a internal buffer
+ **********************************************************************************/
 always @(posedge clk)
 begin
     if (rst == 1'b1)
     begin
         // clear all data
         rx_state <= IDLE_EXCHANGE_STATE;
-        rx_rts <= 1'b0;
+        rx_byte_received <= 1'b0;
+        rx_buffer <= 0;
     end
     else
     begin
-        case (tx_state)
+        case (rx_state)
             IDLE_EXCHANGE_STATE:
             begin
+                rx_state <= SYNCH_WAIT_EXCHANGE_STATE;
+                cts <= 1'b0;
             end
             SYNCH_WAIT_EXCHANGE_STATE:
             begin
+                if (DEFAULT_FLOW_CONTROL == `NO_FLOW_CONTROL)
+                begin
+                    rx_state <= SYNCH_START_EXCHANGE_STATE;
+                end
+                else
+                begin
+                    // expecting here hardware RTS+CTS synch, others are temporarily not supported
+                    if (rts == 1'b1)
+                    begin
+                        if(rx_data_buffer_full == 1'b0)
+                        begin
+                            cts <= 1'b1;
+                        end
+                        else
+                        begin
+                            cts <= 1'b0;
+                        end
+                    end
+                end
+            
             end
             SYNCH_START_EXCHANGE_STATE:
             begin
+                rx_state <= START_BIT_EXCHANGE_STATE;
             end
             START_BIT_EXCHANGE_STATE:
             begin
+                rx_state <= DATA_BITS_EXCHANGE_STATE;
             end
             DATA_BITS_EXCHANGE_STATE:
             begin
+                rx_state <= PARITY_BIT_EXCHANGE_STATE;
             end
             PARITY_BIT_EXCHANGE_STATE:
             begin
+                rx_state <= STOP_BITS_EXCHANGE_STATE;
+                // if parity is bad generate error, don't store byte ...
             end
             STOP_BITS_EXCHANGE_STATE:
             begin
+                rx_state <= SYNCH_STOP_EXCHANGE_STATE;
+                rx_byte_received <= 1'b1;
             end
             SYNCH_STOP_EXCHANGE_STATE:
             begin
+                rx_state <= SYNCH_WAIT_EXCHANGE_STATE;
+                rx_byte_received <= 1'b0;
             end
         endcase
     end
 end
 
-/*
- * Блок для записи (tx) данных в RS232
- */
+/**********************************************************************************
+ * Block for writing (tx) data to RS232
+ **********************************************************************************/
 always @(posedge clk)
 begin
     if (rst == 1'b1)
@@ -140,7 +183,7 @@ begin
         tx_state <= IDLE_EXCHANGE_STATE;
         tx_data_copied <= 1'b0;
         tx_busy <= 1'b0;
-        tx_rts <= 1'b0;
+        // tx_rts <= 1'b0;
         tx_buffer <= 0;
         tx_bit_counter <= 0;
         tx <= 1'b1;                       // IDLE state
