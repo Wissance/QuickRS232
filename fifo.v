@@ -42,12 +42,6 @@ module fifo #
     reg [15: 0] position;
     reg [15: 0] counter;
     
-    //initial position = 0;
-    //initial buffer = 0;
-    //initial pushed_last_value = 0;
-    //initial popped_last_value = 0;
-    //initial data_count = 0;
-    
     assign fifo_ready = enable && ~clear;
     assign out_data = buffer;
     assign pushed_last = pushed_last_value;
