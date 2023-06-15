@@ -55,7 +55,7 @@ module quick_rs232 #(
     output reg rx_hshake_byte_received,
     input wire rx_hshake_next_byte_ready,
     //
-    input wire tx_transaction,                 //
+    input wire tx_transaction,                 // transaction if while tx_transaction == 1 we send data to PC
     input wire [DEFAULT_BYTE_LEN-1:0] tx_data, // data that should be send trough RS232
     input wire tx_data_ready,                  // required: setting to 1 when new data is ready to send
     output reg tx_data_copied,                 // short pulse means that data was copied _--_____--______
@@ -211,6 +211,10 @@ begin
                    tx_data_copied <= 1'b1;
                    tx_busy <= 1'b1;
                    tx_data_bit_counter <= 1'b0;      // Data bit counter = 0
+                end
+                if (tx_transaction == 1'b0)
+                begin
+                   tx_state <= IDLE_EXCHANGE_STATE;
                 end
             end
             START_BIT_EXCHANGE_STATE:
