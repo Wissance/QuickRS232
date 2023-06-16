@@ -34,13 +34,13 @@
 
 
 module quick_rs232 #(
-    CLK_FREQ = 50000000,                       // clk input Frequency (Hz)
-    DEFAULT_BYTE_LEN = 8,                      // RS232 byte length, available values are - 5, 6, 7, 8, 9
-    DEFAULT_PARITY = `EVEN_PARITY,             // Parity: No, Even, Odd, Mark or Space
-    DEFAULT_STOP_BITS = `ONE_STOP_BIT,         // Stop bits number: 0, 1.5 or 2
-    DEFAULT_BAUD_RATE = 9600,                  // Baud = Bit/s, supported values: 2400, 4800, 9600, 19200, 38400, 57600, or 115200
-    DEFAULT_RECV_BUFFER_LEN = 16,              // Input (Rx) buffer size
-    DEFAULT_FLOW_CONTROL = `NO_FLOW_CONTROL    // Flow control type: NO, HARDWARE
+    parameter CLK_FREQ = 50000000,                       // clk input Frequency (Hz)
+    parameter DEFAULT_BYTE_LEN = 8,                      // RS232 byte length, available values are - 5, 6, 7, 8, 9
+    parameter DEFAULT_PARITY = `EVEN_PARITY,             // Parity: No, Even, Odd, Mark or Space
+    parameter DEFAULT_STOP_BITS = `ONE_STOP_BIT,         // Stop bits number: 0, 1.5 or 2
+    parameter DEFAULT_BAUD_RATE = 9600,                  // Baud = Bit/s, supported values: 2400, 4800, 9600, 19200, 38400, 57600, or 115200
+    parameter DEFAULT_RECV_BUFFER_LEN = 16,              // Input (Rx) buffer size
+    parameter DEFAULT_FLOW_CONTROL = `NO_FLOW_CONTROL    // Flow control type: NO, HARDWARE
 )
 (
     // Global Signals
