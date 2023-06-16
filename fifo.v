@@ -24,12 +24,12 @@ module fifo #
     parameter DATA_WIDTH = 32
 )
 (
-    input wire enable,
-    input wire clear,
+    input wire  enable,
+    input wire  clear,
     output wire fifo_ready,
-    input wire push_clock,
-    input wire pop_clock,
-    input wire [DATA_WIDTH - 1 : 0] in_data,
+    input wire  push_clock,
+    input wire  pop_clock,
+    input wire  [DATA_WIDTH - 1 : 0] in_data,
     output wire [DATA_WIDTH - 1 : 0] out_data,
     output wire popped_last,
     output wire pushed_last
@@ -55,7 +55,7 @@ module fifo #
                 fifo_data[counter] = 0;
             position = 0;
             data_count = 0;    
-            popped_last_value = 0;
+            popped_last_value = 1;
             pushed_last_value = 0;
             buffer = 0;
         end
@@ -64,21 +64,23 @@ module fifo #
             //todo: umv: think about smart event separation for push and pop
             if(push_clock)
             begin
-                if(data_count < FIFO_SIZE)
+                if(data_count <= FIFO_SIZE)
                 begin
                     popped_last_value = 0;
                     fifo_data[position] = in_data;
-                    position = position + 1;
+                    position = position + 1;    // position is an index of next item ...
                     data_count = data_count + 1;
-                    if(position == FIFO_SIZE - 1)
+                    if(data_count == FIFO_SIZE)
                     begin
-                        position = 0;
                         pushed_last_value = 1;
                     end
-                    else pushed_last_value = 0;
+                    else
+                    begin
+                        pushed_last_value = 0;
+                    end
                 end
             end
-            else //if(pop_clock)        
+            else
             begin
                 if (data_count >= 1)
                 begin
@@ -89,12 +91,13 @@ module fifo #
                         fifo_data[counter] = fifo_data[counter + 1];
                     fifo_data[FIFO_SIZE - 1] = 0;
                     position = position - 1;
-                    popped_last_value = position == 1;
-                    if(data_count == 1)
-                        popped_last_value = 1;
+                    popped_last_value = position == 0;
                 end
-                else 
+                else
+                begin
+                    popped_last_value = 1;
                     buffer = 0;
+                end
             end
         end
     end   

@@ -45,6 +45,7 @@ fifo #(.FIFO_SIZE(3), .DATA_WIDTH(8)) simple_fifo (.enable(enable), .clear(clear
 
 initial
 begin
+    in_data <= 0;
     counter <= 0;
     push_clock <= 0;
     pop_clock <= 0;
@@ -107,6 +108,60 @@ begin
         pop_clock <= 1;
     end
     if (counter == 52)
+    begin
+        pop_clock <= 0;
+    end
+    // 5. push again (b0)
+    if (counter == 60)
+    begin
+        in_data <= 8'b00010001;
+    end
+    // push clock is up
+    if (counter == 62)
+    begin
+        push_clock <= 1;
+    end
+    // push clock is down
+    if (counter == 63)
+    begin
+        push_clock <= 0;
+    end
+    // 6. push again (b1)
+    if (counter == 70)
+    begin
+        in_data <= 8'b00111001;
+    end
+    // push clock is up
+    if (counter == 72)
+    begin
+        push_clock <= 1;
+    end
+    // push clock is down
+    if (counter == 73)
+    begin
+        push_clock <= 0;
+    end
+    // 7. push again (b0)
+    if (counter == 80)
+    begin
+        in_data <= 8'b01111101;
+    end
+    // push clock is up
+    if (counter == 82)
+    begin
+        push_clock <= 1;
+    end
+    // push clock is down
+    if (counter == 83)
+    begin
+        push_clock <= 0;
+    end
+    // 8. pop b0
+    if (counter == 90)
+    begin
+        pop_clock <= 1;
+    end
+    if (counter == 92)
     begin
         pop_clock <= 0;
     end
