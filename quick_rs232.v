@@ -44,23 +44,24 @@ module quick_rs232 #(
 )
 (
     // Global Signals
-    input wire clk,                            // clk is a clock 
-    input wire rst,                            // rst is a global reset system
+    input wire clk,                                      // clk is a clock 
+    input wire rst,                                      // rst is a global reset system
     // External RS232 Interface
-    input wire rx,                             // rx  - receive  (1 bit line for receive data)
-    output reg tx,                             // tx  - transmit (1 bit line for transmit data)
-    input wire rts,                            // rts - request to send PC sets rts == 1'b1 that indicates that there is a data for receive
-    output reg cts,                            // cts - clear to send (devices sets cts to 1
+    input wire rx,                                       // rx  - receive  (1 bit line for receive data)
+    output reg tx,                                       // tx  - transmit (1 bit line for transmit data)
+    input wire rts,                                      // rts - request to send PC sets rts == 1'b1 that indicates that there is a data for receive
+    output reg cts,                                      // cts - clear to send (devices sets cts to 1
     // Interaction with inner module
-    input wire rx_read,                        // read next data portion __---______---_____
-    output wire [DEFAULT_BYTE_LEN-1:0] rx_data,// data portion
-    output reg rx_byte_received,               // generate short pulse when byre received __--___--___--___
+    input wire rx_read,                                  // read next data portion __---______---_____
+    output reg rx_err,
+    output wire [DEFAULT_BYTE_LEN-1:0] rx_data,          // data portion
+    output reg rx_byte_received,                         // generate short pulse when byre received __--___--___--___
     //
-    input wire tx_transaction,                 // transaction if while tx_transaction == 1 we send data to PC
-    input wire [DEFAULT_BYTE_LEN-1:0] tx_data, // data that should be send trough RS232
-    input wire tx_data_ready,                  // required: setting to 1 when new data is ready to send
-    output reg tx_data_copied,                 // short pulse means that data was copied _--_____--______--___
-    output reg tx_busy                         // tx notes that data is sending via RS232 or RS232 module awaiting flow-control synch
+    input wire tx_transaction,                           // transaction if while tx_transaction == 1 we send data to PC
+    input wire [DEFAULT_BYTE_LEN-1:0] tx_data,           // data that should be send trough RS232
+    input wire tx_data_ready,                            // required: setting to 1 when new data is ready to send
+    output reg tx_data_copied,                           // short pulse means that data was copied _--_____--______--___
+    output reg tx_busy                                   // tx notes that data is sending via RS232 or RS232 module awaiting flow-control synch
 );
 
 localparam reg [3:0] IDLE_EXCHANGE_STATE = 1;
@@ -84,7 +85,12 @@ reg [3:0]  tx_data_bit_counter;
 reg tx_data_parity;
 reg [DEFAULT_BYTE_LEN-1:0] rx_buffer;
 wire rx_data_buffer_full;
+reg [31:0] rx_bit_counter;
+reg [31:0] rx_stop_bit_counter_limit;
+reg [3:0]  rx_data_bit_counter;
+reg rx_data_parity;
 integer i;
+integer j;
 
 supply1 vcc;
 supply0 gnd;
@@ -93,10 +99,6 @@ fifo #(.FIFO_SIZE(DEFAULT_RECV_BUFFER_LEN), .DATA_WIDTH(DEFAULT_BYTE_LEN))
 rx_data_buffer (.enable(vcc), .clear(rst), .push_clock(rx_byte_received), .pop_clock(rx_read), 
                 .in_data(rx_buffer), .out_data(rx_data), .pushed_last(rx_data_buffer_full));
 
-
-/*********************************************************************************
- * Block for reading data from external buffer
- **********************************************************************************/
 
 /**********************************************************************************
  * Block for reading (rx) data from RS232 and store in a internal buffer
@@ -109,6 +111,11 @@ begin
         rx_state <= IDLE_EXCHANGE_STATE;
         rx_byte_received <= 1'b0;
         rx_buffer <= 0;
+        rx_bit_counter <= 0;
+        rx_stop_bit_counter_limit <= 0;
+        rx_data_bit_counter <= 0;
+        rx_data_parity <= 1'b0;
+        rx_err <= 1'b0;
     end
     else
     begin
@@ -132,6 +139,7 @@ begin
                         if(rx_data_buffer_full == 1'b0)
                         begin
                             cts <= 1'b1;
+                            rx_state <= SYNCH_START_EXCHANGE_STATE;
                         end
                         else
                         begin
@@ -143,30 +151,99 @@ begin
             end
             SYNCH_START_EXCHANGE_STATE:
             begin
-                rx_state <= START_BIT_EXCHANGE_STATE;
+                // catch start from 1 to 0
+                
+                if (rx == 1'b0)
+                begin
+                    rx_state <= START_BIT_EXCHANGE_STATE;
+                    rx_bit_counter <= 0;
+                end
             end
             START_BIT_EXCHANGE_STATE:
             begin
-                rx_state <= DATA_BITS_EXCHANGE_STATE;
+                // wait until start is active
+                rx_bit_counter <= rx_bit_counter + 1;
+                if (rx_bit_counter == TICKS_PER_UART_BIT)
+                begin
+                   rx_state <= DATA_BITS_EXCHANGE_STATE;
+                   rx_bit_counter <= 0;
+                   rx_data_bit_counter <= 0;
+                end
             end
             DATA_BITS_EXCHANGE_STATE:
             begin
-                rx_state <= PARITY_BIT_EXCHANGE_STATE;
+                // wait all bytes ....
+                // RX sends as LSB from 0 to 7 bit
+                if (rx_data_bit_counter == DEFAULT_BYTE_LEN)
+                begin
+                    rx_state <= PARITY_BIT_EXCHANGE_STATE;
+                end
+                
+                if (rx_bit_counter == 0)
+                begin
+                    rx_buffer[rx_data_bit_counter] <= rx;
+                end
+                rx_bit_counter <= rx_bit_counter + 1;
+                if (rx_bit_counter == TICKS_PER_UART_BIT)
+                begin
+                    rx_bit_counter <= 0;
+                    rx_data_bit_counter <= rx_data_bit_counter + 1;
+                end
             end
             PARITY_BIT_EXCHANGE_STATE:
             begin
-                rx_state <= STOP_BITS_EXCHANGE_STATE;
-                // if parity is bad generate error, don't store byte ...
+                // rx_data_parity <= rx;
+                // check parity, if parity is bad generate error, don't store byte
+                case (DEFAULT_PARITY)
+                    `NO_PARITY:
+                    begin
+                        rx_state <= STOP_BITS_EXCHANGE_STATE;
+                    end
+                    `MARK_PARITY:
+                    begin
+                        if (rx != 1'b1)
+                        begin
+                            rx_err <= 1'b1;
+                            rx_state <= STOP_BITS_EXCHANGE_STATE;
+                        end
+                    end
+                    `SPACE_PARITY:
+                    begin
+                        if (rx != 1'b0)
+                        begin
+                            rx_err <= 1'b1;
+                            rx_state <= STOP_BITS_EXCHANGE_STATE;
+                        end
+                    end
+                    default:
+                    begin
+                        rx_data_parity <= rx_buffer[0];
+                        for (i = 1; i < DEFAULT_BYTE_LEN; i = i + 1)
+                        begin
+                            rx_data_parity <= rx_data_parity | rx_buffer[i];
+                        end
+                        if (rx != rx_data_parity)
+                        begin
+                            rx_err <= 1'b1;
+                            rx_state <= STOP_BITS_EXCHANGE_STATE;
+                        end
+                    end
+                endcase
+                if (rx_err == 1'b0)
+                begin
+                    rx_byte_received <= 1'b1;
+                end
             end
             STOP_BITS_EXCHANGE_STATE:
             begin
-                rx_state <= SYNCH_STOP_EXCHANGE_STATE;
-                rx_byte_received <= 1'b1;
+                if (rx == 1'b1)
+                    rx_state <= SYNCH_STOP_EXCHANGE_STATE;
             end
             SYNCH_STOP_EXCHANGE_STATE:
             begin
                 rx_state <= SYNCH_WAIT_EXCHANGE_STATE;
                 rx_byte_received <= 1'b0;
+                rx_err <= 1'b0;
             end
         endcase
     end
