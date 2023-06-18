@@ -10,7 +10,7 @@
 // Tool versions:       Quartus Prime Lite 18.1
 // Description:         RS-232 interface with Hardware Flow Control Support
 //
-// Dependencies:        Depends on Fifo.h (taken from https://github.com/IzyaSoft/EasyHDLLib)
+// Dependencies:        Depends on modified Fifo.h (original was taken from https://github.com/IzyaSoft/EasyHDLLib)
 //
 // Revision:            1.0   
 // Additional Comments: 
