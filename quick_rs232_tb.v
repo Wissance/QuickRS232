@@ -80,7 +80,8 @@ begin
         rx <= 1'b0;
     end
     // 1.2 Sending Data bits 8'b01010011
-    if (counter == 2 * RS232_BIT_TICKS + 100)
+    // sending b0 bit - 1
+    if (counter == 2 * RS232_BIT_TICKS + 100)  // we multiply on 2 because counter changes twice a period
     begin
        rx <= 1'b1;
     end
@@ -108,18 +109,22 @@ begin
     begin
        rx <= 1'b1;
     end
-    // 1.3 Sending Parity (even)
     if (counter == 2 * 8 * RS232_BIT_TICKS + 100)
     begin
        rx <= 1'b0;
     end
-    // 1.4 Sending Stop bit
+    // 1.3 Sending Parity (even)
     if (counter == 2 * 9 * RS232_BIT_TICKS + 100)
+    begin
+       rx <= 1'b0;
+    end
+    // 1.4 Sending Stop bit
+    if (counter == 2 * 10 * RS232_BIT_TICKS + 100)
     begin
        rx <= 1'b1;
     end
     //
-    if (counter == 2 * 9 * RS232_BIT_TICKS + 100 + 1)
+    if (counter == 2 * 10 * RS232_BIT_TICKS + 100 + 1)
     begin
         // assert here ...
     end

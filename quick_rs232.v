@@ -178,6 +178,7 @@ begin
                 // RX sends as LSB from 0 to 7 bit
                 if (rx_data_bit_counter == DEFAULT_BYTE_LEN)
                 begin
+                    rx_data_bit_counter <= 0;
                     rx_state <= PARITY_BIT_EXCHANGE_STATE;
                 end
                 
@@ -227,8 +228,8 @@ begin
                         if (rx != rx_data_parity)
                         begin
                             rx_err <= 1'b1;
-                            rx_state <= STOP_BITS_EXCHANGE_STATE;
                         end
+                        rx_state <= STOP_BITS_EXCHANGE_STATE;
                     end
                 endcase
                 if (rx_err == 1'b0)
