@@ -223,7 +223,7 @@ begin
                         rx_data_parity <= rx_buffer[0];
                         for (j = 1; j < DEFAULT_BYTE_LEN; j = j + 1)
                         begin
-                            rx_data_parity <= rx_data_parity | rx_buffer[j];
+                            rx_data_parity <= rx_data_parity ^ rx_buffer[j];
                         end
                         if (rx != rx_data_parity)
                         begin
@@ -386,7 +386,7 @@ begin
                         tx_data_parity <= tx_buffer[0];
                         for (i = 1; i < DEFAULT_BYTE_LEN; i = i + 1)
                         begin
-                            tx_data_parity <= tx_data_parity | tx_buffer[i];
+                            tx_data_parity <= tx_data_parity ^ tx_buffer[i];
                         end
                         tx <= tx_data_parity == 1'b0 ? 1'b0: 1'b1;
                     end
@@ -395,7 +395,7 @@ begin
                         tx_data_parity <= tx_buffer[0];
                         for (i = 1; i < DEFAULT_BYTE_LEN; i = i + 1)
                         begin
-                            tx_data_parity <= tx_data_parity | tx_buffer[i];
+                            tx_data_parity <= tx_data_parity ^ tx_buffer[i];
                         end
                         tx <= tx_data_parity == 1'b0 ? 1'b1: 1'b0;
                     end

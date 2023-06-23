@@ -132,7 +132,7 @@ begin
     begin
        rx <= 1'b1;
     end
-    // ASSERT on first byte
+    // 1.5 ASSERT on first byte
     if (counter > 2 * 8 * RS232_BIT_TICKS + 100 && counter < 2 * 10 * RS232_BIT_TICKS + 100)
     begin
         `ASSERT(rx_err, 1'b0)
@@ -146,6 +146,80 @@ begin
         `ASSERT(rx_data, 8'b01010011)
     end
     if (counter == 2 * 10 * RS232_BIT_TICKS + 300)
+    begin
+        rx_read <= 0;
+    end
+    // 2. Reading next byte
+    // 2.1 Sending Start
+    if (counter == 2 * 15* RS232_BIT_TICKS)
+    begin
+        rx <= 1'b0;
+    end
+    // 2.2 Sending Data bits 8'b10010100
+    // b0
+    if (counter == 2 * 16* RS232_BIT_TICKS)  // we multiply on 2 because counter changes twice a period
+    begin
+       rx <= 1'b0;
+    end
+    // b1
+    if (counter == 2 * 17 * RS232_BIT_TICKS)
+    begin
+       rx <= 1'b0;
+    end
+    // b2
+    if (counter == 2 * 18 * RS232_BIT_TICKS)
+    begin
+       rx <= 1'b1;
+    end
+    // b3
+    if (counter == 2 * 19 * RS232_BIT_TICKS)
+    begin
+       rx <= 1'b0;
+    end
+    // b4
+    if (counter == 2 * 20 * RS232_BIT_TICKS)
+    begin
+       rx <= 1'b1;
+    end
+    // b5
+    if (counter == 2 * 21 * RS232_BIT_TICKS)
+    begin
+       rx <= 1'b0;
+    end
+    // b6
+    if (counter == 2 * 22 * RS232_BIT_TICKS)
+    begin
+       rx <= 1'b0;
+    end
+    // b7
+    if (counter == 2 * 23 * RS232_BIT_TICKS)
+    begin
+       rx <= 1'b1;
+    end
+    // 2.3 Sending Parity (even)
+    if (counter == 2 * 24 * RS232_BIT_TICKS)
+    begin
+       rx <= 1'b1;
+    end
+    // 2.4 Sending Stop bit
+    if (counter == 2 * 25 * RS232_BIT_TICKS)
+    begin
+       rx <= 1'b1;
+    end
+    // 2.5 ASSERT on first byte
+    if (counter > 2 * 23 * RS232_BIT_TICKS&& counter < 2 * 25 * RS232_BIT_TICKS)
+    begin
+        `ASSERT(rx_err, 1'b0)
+    end
+    if (counter == 2 * 26 * RS232_BIT_TICKS)
+    begin
+        rx_read <= 1;
+    end
+    if (counter == 2 * 26 * RS232_BIT_TICKS + 2)
+    begin
+        `ASSERT(rx_data, 8'b10010100)
+    end
+    if (counter == 2 * 26 * RS232_BIT_TICKS + 52)
     begin
         rx_read <= 0;
     end
