@@ -58,6 +58,8 @@ serial_dev (.clk(clk), .rst(rst), .rx(rx), .tx(tx), .rts(rts), .cts(cts),
 
 initial
 begin
+    tx_transaction <= 0;
+    rx_read <= 0;
     clk <= 0;
     counter <= 0;
     rst <= 0;
@@ -73,42 +75,49 @@ always
 begin
     #10 clk <= ~clk; // 50 MHz
     counter <= counter + 1;
-    // 1. Full cycle: RX + TX ...
+    // 1. RX (reading byte without an error)
     // 1.1 Sending Start bit
     if (counter == 100)
     begin
         rx <= 1'b0;
     end
     // 1.2 Sending Data bits 8'b01010011
-    // sending b0 bit - 1
+    // b0
     if (counter == 2 * RS232_BIT_TICKS + 100)  // we multiply on 2 because counter changes twice a period
     begin
        rx <= 1'b1;
     end
+    // b1
     if (counter == 2 * 2 * RS232_BIT_TICKS + 100)
     begin
        rx <= 1'b1;
     end
+    // b2
     if (counter == 2 * 3 * RS232_BIT_TICKS + 100)
     begin
        rx <= 1'b0;
     end
+    // b3
     if (counter == 2 * 4 * RS232_BIT_TICKS + 100)
     begin
        rx <= 1'b0;
     end
+    // b4
     if (counter == 2 * 5 * RS232_BIT_TICKS + 100)
     begin
        rx <= 1'b1;
     end
+    // b5
     if (counter == 2 * 6 * RS232_BIT_TICKS + 100)
     begin
        rx <= 1'b0;
     end
+    // b6
     if (counter == 2 * 7 * RS232_BIT_TICKS + 100)
     begin
        rx <= 1'b1;
     end
+    // b7
     if (counter == 2 * 8 * RS232_BIT_TICKS + 100)
     begin
        rx <= 1'b0;
@@ -123,10 +132,22 @@ begin
     begin
        rx <= 1'b1;
     end
-    //
-    if (counter == 2 * 10 * RS232_BIT_TICKS + 100 + 1)
+    // ASSERT on first byte
+    if (counter > 2 * 8 * RS232_BIT_TICKS + 100 && counter < 2 * 10 * RS232_BIT_TICKS + 100)
     begin
-        // assert here ...
+        `ASSERT(rx_err, 1'b0)
+    end
+    if (counter == 2 * 10 * RS232_BIT_TICKS + 200)
+    begin
+        rx_read <= 1;
+    end
+    if (counter == 2 * 10 * RS232_BIT_TICKS + 200 + 2)
+    begin
+        `ASSERT(rx_data, 8'b01010011)
+    end
+    if (counter == 2 * 10 * RS232_BIT_TICKS + 300)
+    begin
+        rx_read <= 0;
     end
 end
 
