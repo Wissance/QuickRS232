@@ -38,7 +38,7 @@ module quick_rs232 #(
     parameter DEFAULT_BYTE_LEN = 8,                      // RS232 byte length, available values are - 5, 6, 7, 8, 9
     parameter DEFAULT_PARITY = `EVEN_PARITY,             // Parity: No, Even, Odd, Mark or Space
     parameter DEFAULT_STOP_BITS = `ONE_STOP_BIT,         // Stop bits number: 0, 1.5 or 2
-    parameter DEFAULT_BAUD_RATE = 9600,                  // Baud = Bit/s, supported values: 2400, 4800, 9600, 19200, 38400, 57600, or 115200
+    parameter DEFAULT_BAUD_RATE = 115200,                // Baud = Bit/s, supported values: 2400, 4800, 9600, 19200, 38400, 57600, or 115200
     parameter DEFAULT_RECV_BUFFER_LEN = 16,              // Input (Rx) buffer size
     parameter DEFAULT_FLOW_CONTROL = `NO_FLOW_CONTROL    // Flow control type: NO, HARDWARE
 )
@@ -73,8 +73,8 @@ localparam reg [3:0] PARITY_BIT_EXCHANGE_STATE = 6;
 localparam reg [3:0] STOP_BITS_EXCHANGE_STATE = 7;
 localparam reg [3:0] SYNCH_STOP_EXCHANGE_STATE = 8;
 
-localparam reg [31:0] TICKS_PER_UART_BIT = CLK_FREQ / DEFAULT_BAUD_RATE;
-localparam reg [31:0] HALF_TICKS_PER_UART_BIT = TICKS_PER_UART_BIT / 2;
+reg [31:0] TICKS_PER_UART_BIT;                           // = CLK_FREQ / DEFAULT_BAUD_RATE;
+reg [31:0] HALF_TICKS_PER_UART_BIT;                      // = TICKS_PER_UART_BIT / 2;
 
 reg [3:0] tx_state;
 reg [3:0] rx_state;
@@ -116,6 +116,9 @@ begin
         rx_data_bit_counter <= 0;
         rx_data_parity <= 1'b0;
         rx_err <= 1'b0;
+        TICKS_PER_UART_BIT <= CLK_FREQ / DEFAULT_BAUD_RATE;
+        HALF_TICKS_PER_UART_BIT <= TICKS_PER_UART_BIT / 2;
+        j <= 0;
     end
     else
     begin
@@ -152,7 +155,6 @@ begin
             SYNCH_START_EXCHANGE_STATE:
             begin
                 // catch start from 1 to 0
-                
                 if (rx == 1'b0)
                 begin
                     rx_state <= START_BIT_EXCHANGE_STATE;
@@ -218,9 +220,9 @@ begin
                     default:
                     begin
                         rx_data_parity <= rx_buffer[0];
-                        for (i = 1; i < DEFAULT_BYTE_LEN; i = i + 1)
+                        for (j = 1; j < DEFAULT_BYTE_LEN; j = j + 1)
                         begin
-                            rx_data_parity <= rx_data_parity | rx_buffer[i];
+                            rx_data_parity <= rx_data_parity | rx_buffer[j];
                         end
                         if (rx != rx_data_parity)
                         begin
@@ -267,6 +269,7 @@ begin
         tx_data_bit_counter <= 1'b0;      // Data bit counter = 0
         tx_data_parity <= 1'b0;
         tx_stop_bit_counter_limit <= 0;
+        i <= 0;
     end
     else
     begin
