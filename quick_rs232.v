@@ -312,17 +312,17 @@ begin
                 // FLOW control synchronization
                 if (DEFAULT_FLOW_CONTROL == `NO_FLOW_CONTROL)
                 begin
-                   tx_state <= SYNCH_START_EXCHANGE_STATE;
+                    tx_state <= SYNCH_START_EXCHANGE_STATE;
                 end
                 else
                 begin
-                   if (DEFAULT_FLOW_CONTROL == `CTS_RTS_FLOW_CONTROL)
-                   begin
-                       // RTS + CTS
-                       // Here we assume that RTS wired with RTS, CTS with CTS, no crossing RTS->CTS, CTS->RTS
-                       // therefore is nothing to do in TX here
-                       tx_state <= SYNCH_START_EXCHANGE_STATE;
-                   end
+                    if (DEFAULT_FLOW_CONTROL == `CTS_RTS_FLOW_CONTROL)
+                    begin
+                        // RTS + CTS
+                        // Here we assume that RTS wired with RTS, CTS with CTS, no crossing RTS->CTS, CTS->RTS
+                        // therefore is nothing to do in TX here
+                        tx_state <= SYNCH_START_EXCHANGE_STATE;
+                    end
                 end
             end
             SYNCH_START_EXCHANGE_STATE:
@@ -330,15 +330,15 @@ begin
                 // wait for data here and move to real tx when we have data
                 if (tx_data_ready == 1'b1)
                 begin
-                   tx_state <= START_BIT_EXCHANGE_STATE;
-                   tx_buffer <= tx_data;
-                   tx_data_copied <= 1'b1;
-                   tx_busy <= 1'b1;
-                   tx_data_bit_counter <= 1'b0;      // Data bit counter = 0
+                    tx_state <= START_BIT_EXCHANGE_STATE;
+                    tx_buffer <= tx_data;
+                    tx_data_copied <= 1'b1;
+                    tx_busy <= 1'b1;
+                    tx_data_bit_counter <= 1'b0;      // Data bit counter = 0
                 end
                 if (tx_transaction == 1'b0)
                 begin
-                   tx_state <= IDLE_EXCHANGE_STATE;
+                    tx_state <= IDLE_EXCHANGE_STATE;
                 end
             end
             START_BIT_EXCHANGE_STATE:
@@ -347,8 +347,8 @@ begin
                 tx_bit_counter <= tx_bit_counter + 1;
                 if (tx_bit_counter == TICKS_PER_UART_BIT)
                 begin
-                   tx_bit_counter <= 0;
-                   tx_state <= DATA_BITS_EXCHANGE_STATE;
+                    tx_bit_counter <= 0;
+                    tx_state <= DATA_BITS_EXCHANGE_STATE;
                 end
             end
             DATA_BITS_EXCHANGE_STATE:
@@ -357,49 +357,52 @@ begin
                 tx_bit_counter <= tx_bit_counter + 1;
                 if (tx_bit_counter == TICKS_PER_UART_BIT)
                 begin
-                   tx_bit_counter <= 0;
-                   tx_data_bit_counter <= tx_data_bit_counter + 1;
-                   if (tx_data_bit_counter == DEFAULT_BYTE_LEN)
-                   begin
-                       tx_state <= PARITY_BIT_EXCHANGE_STATE;
-                       tx_data_copied <= 1'b0;
-                   end
+                    tx_bit_counter <= 0;
+                    tx_data_bit_counter <= tx_data_bit_counter + 1;
+                    if (tx_data_bit_counter == DEFAULT_BYTE_LEN - 1)
+                    begin
+                        tx_state <= PARITY_BIT_EXCHANGE_STATE;
+                        tx_data_copied <= 1'b0;
+                    end
                 end
             end
             PARITY_BIT_EXCHANGE_STATE:
             begin
-                case (DEFAULT_PARITY)
-                    `NO_PARITY:
-                    begin
-                        tx_state <= STOP_BITS_EXCHANGE_STATE;
-                    end
-                    `MARK_PARITY:
-                    begin
-                        tx <= 1'b1;
-                    end
-                    `SPACE_PARITY:
-                    begin
-                        tx <= 1'b0;
-                    end
-                    `EVEN_PARITY:
-                    begin
-                        tx_data_parity <= tx_buffer[0];
-                        for (i = 1; i < DEFAULT_BYTE_LEN; i = i + 1)
+                if (tx_bit_counter == 0)
+                begin
+                    case (DEFAULT_PARITY)
+                        `NO_PARITY:
                         begin
-                            tx_data_parity <= tx_data_parity ^ tx_buffer[i];
+                            tx_state <= STOP_BITS_EXCHANGE_STATE;
                         end
-                        tx <= tx_data_parity == 1'b0 ? 1'b0: 1'b1;
-                    end
-                    `ODD_PARITY:
-                    begin
-                        tx_data_parity <= tx_buffer[0];
-                        for (i = 1; i < DEFAULT_BYTE_LEN; i = i + 1)
+                        `MARK_PARITY:
                         begin
-                            tx_data_parity <= tx_data_parity ^ tx_buffer[i];
+                            tx <= 1'b1;
                         end
-                        tx <= tx_data_parity == 1'b0 ? 1'b1: 1'b0;
-                    end
-                endcase
+                        `SPACE_PARITY:
+                        begin
+                            tx <= 1'b0;
+                        end
+                        `EVEN_PARITY:
+                        begin
+                            tx_data_parity <= tx_buffer[0];
+                            for (i = 1; i < DEFAULT_BYTE_LEN; i = i + 1)
+                            begin
+                                tx_data_parity <= tx_data_parity ^ tx_buffer[i];
+                            end
+                            tx <= tx_data_parity == 1'b0 ? 1'b0: 1'b1;
+                        end
+                        `ODD_PARITY:
+                        begin
+                            tx_data_parity <= tx_buffer[0];
+                            for (i = 1; i < DEFAULT_BYTE_LEN; i = i + 1)
+                            begin
+                                tx_data_parity <= tx_data_parity ^ tx_buffer[i];
+                            end
+                            tx <= tx_data_parity == 1'b0 ? 1'b1: 1'b0;
+                        end
+                    endcase
+                end
                 
                 if (DEFAULT_PARITY != `NO_PARITY)
                 begin

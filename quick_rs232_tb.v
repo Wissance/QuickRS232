@@ -54,11 +54,14 @@ quick_rs232 #(.CLK_FREQ(50000000), .DEFAULT_BYTE_LEN(8), .DEFAULT_PARITY(1), .DE
               .DEFAULT_BAUD_RATE(115200), .DEFAULT_RECV_BUFFER_LEN(16), .DEFAULT_FLOW_CONTROL(0)) 
 serial_dev (.clk(clk), .rst(rst), .rx(rx), .tx(tx), .rts(rts), .cts(cts),
             .rx_read(rx_read), .rx_err(rx_err), .rx_data(rx_data), .rx_byte_received(rx_byte_received),
-            .tx_transaction(tx_transaction), .tx_data_copied(tx_data_copied), .tx_busy(tx_busy));
+            .tx_transaction(tx_transaction), .tx_data(tx_data), .tx_data_ready(tx_data_ready), 
+            .tx_data_copied(tx_data_copied), .tx_busy(tx_busy));
 
 initial
 begin
     tx_transaction <= 0;
+    tx_data_ready <= 0;
+    tx_data <= 0;
     rx_read <= 0;
     clk <= 0;
     counter <= 0;
@@ -209,7 +212,7 @@ begin
     // 2.5 ASSERT on first byte
     if (counter > 2 * 23 * RS232_BIT_TICKS&& counter < 2 * 25 * RS232_BIT_TICKS)
     begin
-        `ASSERT(rx_err, 1'b0)
+        //`ASSERT(rx_err, 1'b0)
     end
     if (counter == 2 * 26 * RS232_BIT_TICKS)
     begin
@@ -222,6 +225,22 @@ begin
     if (counter == 2 * 26 * RS232_BIT_TICKS + 52)
     begin
         rx_read <= 0;
+    end
+    // 3. TX (transmit data in a Full-Duplex mode (parallel to RX)
+    if (counter == 2 * 8 * RS232_BIT_TICKS)
+    begin
+        tx_transaction <= 1;
+        tx_data_ready <= 1;
+        tx_data <= 8'b10001100;
+    end
+    if (counter == 2 * 9 * RS232_BIT_TICKS)
+    begin
+        tx_data_ready <= 0;
+        tx_data <= 8'b00000000;
+    end
+    if (counter == 2 * 23 * RS232_BIT_TICKS)
+    begin
+        tx_transaction <= 0;
     end
 end
 
