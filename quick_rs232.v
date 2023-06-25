@@ -70,8 +70,9 @@ localparam reg [3:0] SYNCH_START_EXCHANGE_STATE = 3;
 localparam reg [3:0] START_BIT_EXCHANGE_STATE = 4;
 localparam reg [3:0] DATA_BITS_EXCHANGE_STATE = 5;
 localparam reg [3:0] PARITY_BIT_EXCHANGE_STATE = 6;
-localparam reg [3:0] STOP_BITS_EXCHANGE_STATE = 7;
-localparam reg [3:0] SYNCH_STOP_EXCHANGE_STATE = 8;
+localparam reg [3:0] PARITY_BIT_ANALYZE_STATE = 7;
+localparam reg [3:0] STOP_BITS_EXCHANGE_STATE = 8;
+localparam reg [3:0] SYNCH_STOP_EXCHANGE_STATE = 9;
 
 reg [31:0] TICKS_PER_UART_BIT;                           // = CLK_FREQ / DEFAULT_BAUD_RATE;
 reg [31:0] HALF_TICKS_PER_UART_BIT;                      // = TICKS_PER_UART_BIT / 2;
@@ -220,27 +221,44 @@ begin
                     end
                     default:
                     begin
+                        // using XOR in we have even value of 1, rx_data_parity is 1, otherwise - 0.
                         rx_data_parity <= rx_buffer[0];
                         for (j = 1; j < DEFAULT_BYTE_LEN; j = j + 1)
                         begin
                             rx_data_parity <= rx_data_parity ^ rx_buffer[j];
                         end
-                        if (rx != rx_data_parity)
-                        begin
-                            rx_err <= 1'b1;
-                        end
-                        rx_state <= STOP_BITS_EXCHANGE_STATE;
+                        rx_state <= PARITY_BIT_ANALYZE_STATE;
                     end
                 endcase
+            end
+            PARITY_BIT_ANALYZE_STATE:
+            begin
+                if (DEFAULT_PARITY == `EVEN_PARITY)
+                begin
+                    if (rx_data_parity != rx)
+                    begin
+                        rx_err <= 1'b1;
+                    end
+                end
+                else
+                begin
+                    if (rx_data_parity != ~rx)
+                    begin
+                        rx_err <= 1'b1;
+                    end
+                end
+                rx_state <= STOP_BITS_EXCHANGE_STATE;
+            end
+            STOP_BITS_EXCHANGE_STATE:
+            begin
                 if (rx_err == 1'b0)
                 begin
                     rx_byte_received <= 1'b1;
                 end
-            end
-            STOP_BITS_EXCHANGE_STATE:
-            begin
                 if (rx == 1'b1)
+                begin
                     rx_state <= SYNCH_STOP_EXCHANGE_STATE;
+                end
             end
             SYNCH_STOP_EXCHANGE_STATE:
             begin
