@@ -401,23 +401,13 @@ begin
                         begin
                             tx <= 1'b0;
                         end
-                        `EVEN_PARITY:
+                        default:
                         begin
                             tx_data_parity <= tx_buffer[0];
                             for (i = 1; i < DEFAULT_BYTE_LEN; i = i + 1)
                             begin
                                 tx_data_parity <= tx_data_parity ^ tx_buffer[i];
                             end
-                            tx <= tx_data_parity == 1'b0 ? 1'b0: 1'b1;
-                        end
-                        `ODD_PARITY:
-                        begin
-                            tx_data_parity <= tx_buffer[0];
-                            for (i = 1; i < DEFAULT_BYTE_LEN; i = i + 1)
-                            begin
-                                tx_data_parity <= tx_data_parity ^ tx_buffer[i];
-                            end
-                            tx <= tx_data_parity == 1'b0 ? 1'b1: 1'b0;
                         end
                     endcase
                 end
@@ -425,6 +415,13 @@ begin
                 if (DEFAULT_PARITY != `NO_PARITY)
                 begin
                     tx_bit_counter <= tx_bit_counter + 1;
+                    if (tx_bit_counter == 1)
+                    begin
+                        if (DEFAULT_PARITY == `EVEN_PARITY)
+                            tx <= tx_data_parity == 1'b0 ? 1'b0: 1'b1;
+                        if (DEFAULT_PARITY == `ODD_PARITY)
+                            tx <= tx_data_parity == 1'b0 ? 1'b1: 1'b0;
+                    end
                     if (tx_bit_counter == TICKS_PER_UART_BIT)
                     begin
                         tx_bit_counter <= 0;
