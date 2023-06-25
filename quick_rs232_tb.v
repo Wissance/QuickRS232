@@ -212,7 +212,7 @@ begin
     // 2.5 ASSERT on first byte
     if (counter > 2 * 23 * RS232_BIT_TICKS&& counter < 2 * 25 * RS232_BIT_TICKS)
     begin
-        //`ASSERT(rx_err, 1'b0)
+        `ASSERT(rx_err, 1'b0)
     end
     if (counter == 2 * 26 * RS232_BIT_TICKS)
     begin
