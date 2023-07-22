@@ -71,8 +71,11 @@ localparam reg [3:0] START_BIT_EXCHANGE_STATE = 4;
 localparam reg [3:0] DATA_BITS_EXCHANGE_STATE = 5;
 localparam reg [3:0] PARITY_BIT_EXCHANGE_STATE = 6;
 localparam reg [3:0] PARITY_BIT_ANALYZE_STATE = 7;
-localparam reg [3:0] STOP_BITS_EXCHANGE_STATE = 8;
-localparam reg [3:0] SYNCH_STOP_EXCHANGE_STATE = 9;
+localparam reg [3:0] PARITY_REMANENCE_TIMEOUT_WAIT_STATE = 8;
+localparam reg [3:0] STOP_BITS_EXCHANGE_STATE = 9;
+localparam reg [3:0] SYNCH_STOP_EXCHANGE_STATE = 10;
+
+localparam reg [31:0] PARITY_ANALYZE_OFFSET = 16;
 
 reg [31:0] TICKS_PER_UART_BIT;                           // = CLK_FREQ / DEFAULT_BAUD_RATE;
 reg [31:0] HALF_TICKS_PER_UART_BIT;                      // = TICKS_PER_UART_BIT / 2;
@@ -196,40 +199,43 @@ begin
             end
             PARITY_BIT_EXCHANGE_STATE:
             begin
-                // rx_data_parity <= rx;
-                // check parity, if parity is bad generate error, don't store byte
-                case (DEFAULT_PARITY)
-                    `NO_PARITY:
-                    begin
-                        rx_state <= STOP_BITS_EXCHANGE_STATE;
-                    end
-                    `MARK_PARITY:
-                    begin
-                        if (rx != 1'b1)
+                rx_bit_counter <= rx_bit_counter + 1;
+					 if (rx_bit_counter == TICKS_PER_UART_BIT - PARITY_ANALYZE_OFFSET)
+					 begin
+                    // check parity, if parity is bad generate error, don't store byte
+                    case (DEFAULT_PARITY)
+                        `NO_PARITY:
                         begin
-                            rx_err <= 1'b1;
-                            rx_state <= STOP_BITS_EXCHANGE_STATE;
+                            rx_state <= PARITY_REMANENCE_TIMEOUT_WAIT_STATE;
                         end
-                    end
-                    `SPACE_PARITY:
-                    begin
-                        if (rx != 1'b0)
+                        `MARK_PARITY:
                         begin
-                            rx_err <= 1'b1;
-                            rx_state <= STOP_BITS_EXCHANGE_STATE;
+                            if (rx != 1'b1)
+                            begin
+                                rx_err <= 1'b1;
+                                rx_state <= PARITY_REMANENCE_TIMEOUT_WAIT_STATE;
+                            end
                         end
-                    end
-                    default:
-                    begin
-                        // using XOR in we have even value of 1, rx_data_parity is 1, otherwise - 0.
-                        rx_data_parity <= rx_buffer[0];
-                        for (j = 1; j < DEFAULT_BYTE_LEN; j = j + 1)
+                        `SPACE_PARITY:
                         begin
-                            rx_data_parity <= rx_data_parity ^ rx_buffer[j];
+                            if (rx != 1'b0)
+                            begin
+                                rx_err <= 1'b1;
+                                rx_state <= PARITY_REMANENCE_TIMEOUT_WAIT_STATE;
+                            end
                         end
-                        rx_state <= PARITY_BIT_ANALYZE_STATE;
-                    end
-                endcase
+                        default:
+                        begin
+                            // using XOR in we have even value of 1, rx_data_parity is 1, otherwise - 0.
+                            rx_data_parity <= rx_buffer[0];
+                            for (j = 1; j < DEFAULT_BYTE_LEN; j = j + 1)
+                            begin
+                                rx_data_parity <= rx_data_parity ^ rx_buffer[j];
+                            end
+                            rx_state <= PARITY_BIT_ANALYZE_STATE;
+                        end
+                    endcase
+					 end
             end
             PARITY_BIT_ANALYZE_STATE:
             begin
@@ -247,14 +253,22 @@ begin
                         rx_err <= 1'b1;
                     end
                 end
-                rx_state <= STOP_BITS_EXCHANGE_STATE;
+                rx_state <= PARITY_REMANENCE_TIMEOUT_WAIT_STATE;
             end
-            STOP_BITS_EXCHANGE_STATE:
-            begin
-                if (rx_err == 1'b0)
+				PARITY_REMANENCE_TIMEOUT_WAIT_STATE:
+				begin
+				    rx_bit_counter <= rx_bit_counter + 1;
+					 if (rx_bit_counter == TICKS_PER_UART_BIT + 1)
+					 begin
+					     rx_state <= STOP_BITS_EXCHANGE_STATE;
+					 end
+					 if (rx_err == 1'b0)
                 begin
                     rx_byte_received <= 1'b1;
                 end
+				end
+            STOP_BITS_EXCHANGE_STATE:
+            begin
                 if (rx == 1'b1)
                 begin
                     rx_state <= SYNCH_STOP_EXCHANGE_STATE;
