@@ -48,10 +48,10 @@ wire tx_busy;
 
 reg [31:0] counter;
 
-localparam reg[31:0] RS232_BIT_TICKS = 50000000 / 115200; // == 434
+localparam reg[31:0] RS232_BIT_TICKS = 434; // 115200 bit/s at 50 MHz
 
-quick_rs232 #(.CLK_FREQ(50000000), .DEFAULT_BYTE_LEN(8), .DEFAULT_PARITY(1), .DEFAULT_STOP_BITS(0),
-              .DEFAULT_BAUD_RATE(115200), .DEFAULT_RECV_BUFFER_LEN(16), .DEFAULT_FLOW_CONTROL(0)) 
+quick_rs232 #(.CLK_TICKS_PER_RS232_BIT(RS232_BIT_TICKS), .DEFAULT_BYTE_LEN(8), .DEFAULT_PARITY(1), .DEFAULT_STOP_BITS(0),
+              .DEFAULT_RECV_BUFFER_LEN(16), .DEFAULT_FLOW_CONTROL(0)) 
 serial_dev (.clk(clk), .rst(rst), .rx(rx), .tx(tx), .rts(rts), .cts(cts),
             .rx_read(rx_read), .rx_err(rx_err), .rx_data(rx_data), .rx_byte_received(rx_byte_received),
             .tx_transaction(tx_transaction), .tx_data(tx_data), .tx_data_ready(tx_data_ready), 

@@ -29,16 +29,14 @@
 // Flow controls
 `define NO_FLOW_CONTROL        0
 `define CTS_RTS_FLOW_CONTROL   1
-// Baud Rate
-// todo(UMV) add consts ...
 
 
+// Baud = Bit/s, supported values: 2400, 4800, 9600, 19200, 38400, 57600, or 115200 (RS232 )
 module quick_rs232 #(
-    parameter CLK_FREQ = 50000000,                       // clk input Frequency (Hz)
+    parameter CLK_TICKS_PER_RS232_BIT = 434,             // ticks of clock per rs232 bit (i.e 434 is a value for 50MHz at clk && 115200 bit/s RS232 speed), = clk freq / rs232 speed 
     parameter DEFAULT_BYTE_LEN = 8,                      // RS232 byte length, available values are - 5, 6, 7, 8, 9
     parameter DEFAULT_PARITY = `EVEN_PARITY,             // Parity: No, Even, Odd, Mark or Space
-    parameter DEFAULT_STOP_BITS = `ONE_STOP_BIT,         // Stop bits number: 0, 1.5 or 2
-    parameter DEFAULT_BAUD_RATE = 115200,                // Baud = Bit/s, supported values: 2400, 4800, 9600, 19200, 38400, 57600, or 115200
+    parameter DEFAULT_STOP_BITS = `ONE_STOP_BIT,         // Stop bits number: 0, 1.5 or 2              
     parameter DEFAULT_RECV_BUFFER_LEN = 16,              // Input (Rx) buffer size
     parameter DEFAULT_FLOW_CONTROL = `NO_FLOW_CONTROL    // Flow control type: NO, HARDWARE
 )
@@ -120,8 +118,8 @@ begin
         rx_data_bit_counter <= 0;
         rx_data_parity <= 1'b0;
         rx_err <= 1'b0;
-        TICKS_PER_UART_BIT <= CLK_FREQ / DEFAULT_BAUD_RATE;
-        HALF_TICKS_PER_UART_BIT <= TICKS_PER_UART_BIT / 2;
+        TICKS_PER_UART_BIT <= CLK_TICKS_PER_RS232_BIT;
+        HALF_TICKS_PER_UART_BIT <= CLK_TICKS_PER_RS232_BIT / 2;
         j <= 0;
     end
     else
