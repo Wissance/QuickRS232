@@ -85,7 +85,7 @@ begin
     if (counter == 23)
     begin
         push <= 0;
-        //`ASSERT(pushed_last, 1'b0)
+        `ASSERT(pushed_last, 1'b0)
     end
     // 2. push first
     // 2.1 setting data first
@@ -102,7 +102,7 @@ begin
     if (counter == 33)
     begin
         push <= 0;
-        //`ASSERT(pushed_last, 1'b0)
+        `ASSERT(pushed_last, 1'b0)
     end
     // 3. pop first byte
     if (counter == 40)
@@ -112,8 +112,11 @@ begin
     if (counter == 42)
     begin
         pop <= 0;
-        //`ASSERT(out_data, 8'b10101100)
-        //`ASSERT(popped_last, 1'b0)
+    end
+    if (counter == 44)
+    begin
+        `ASSERT(out_data, 8'b10101100)
+        `ASSERT(popped_last, 1'b0)
     end
     // 4. pop second byte
     if (counter == 50)
@@ -123,7 +126,10 @@ begin
     if (counter == 52)
     begin
         pop <= 0;
-        //`ASSERT(out_data, 8'b01100001)
+    end
+    if (counter == 56)
+    begin
+        `ASSERT(out_data, 8'b01100001)
         //`ASSERT(popped_last, 1'b1)
     end
     // 5. push again (b0)
@@ -135,13 +141,15 @@ begin
     if (counter == 62)
     begin
         push <= 1;
-        
     end
     // push clock is down
     if (counter == 63)
     begin
         push <= 0;
-        //`ASSERT(pushed_last, 1'b0)
+    end
+    if (counter == 65)
+    begin
+        `ASSERT(pushed_last, 1'b0)
     end
     // 6. push again (b1)
     if (counter == 70)
@@ -157,7 +165,10 @@ begin
     if (counter == 73)
     begin
         push <= 0;
-        //`ASSERT(pushed_last, 1'b0)
+    end
+    if (counter == 75)
+    begin
+        `ASSERT(pushed_last, 1'b0)
     end
     // 7. push again (b0)
     if (counter == 80)
@@ -173,6 +184,9 @@ begin
     if (counter == 83)
     begin
         push <= 0;
+    end
+    if (counter == 85)
+    begin
         //`ASSERT(pushed_last, 1'b1)
     end
     // 8. pop b0
@@ -183,7 +197,10 @@ begin
     if (counter == 92)
     begin
         pop <= 0;
-        //`ASSERT(pushed_last, 1'b0)
+    end
+    if (counter == 95)
+    begin
+        `ASSERT(pushed_last, 1'b0)
     end
 end
 
