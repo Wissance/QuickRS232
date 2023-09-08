@@ -101,7 +101,7 @@ supply1 vcc;
 supply0 gnd;
 
 fifo #(.FIFO_SIZE(DEFAULT_RECV_BUFFER_LEN), .DATA_WIDTH(DEFAULT_BYTE_LEN)) 
-rx_data_buffer (.enable(vcc), .clear(rst), .push_clock(rx_byte_received), .pop_clock(rx_read), 
+rx_data_buffer (.clk(clk), .clear(rst), .push(rx_byte_received), .pop(rx_read), 
                 .in_data(rx_buffer), .out_data(rx_data), .pushed_last(rx_data_buffer_full));
 
 

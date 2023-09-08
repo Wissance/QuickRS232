@@ -25,7 +25,7 @@ module fifo #
 )
 (
     input wire  clk,
-    input wire  enable,
+    //input wire  enable,
     input wire  clear,
     output wire fifo_ready,
     input wire  push,
@@ -51,7 +51,7 @@ module fifo #
     localparam reg [2:0] POP_FINISHED = 5;
     localparam reg [2:0] OPERATION_AWAITING = 6;
     
-    assign fifo_ready = enable && ~clear;   // candidate 4 remove in a synchronous FIFO
+    //assign fifo_ready = enable && ~clear;   // candidate 4 remove in a synchronous FIFO
     assign out_data = buffer;
     assign pushed_last = pushed_last_value;
     assign popped_last = popped_last_value;
@@ -117,9 +117,9 @@ module fifo #
                 begin
                     if (data_count >= 1)
                     begin
-                        buffer = fifo_data[0];
-                        data_count = data_count - 1;
-                        pushed_last_value = 0;
+                        buffer <= fifo_data[0];
+                        data_count <= data_count - 1;
+                        pushed_last_value <= 0;
                         for(counter = 0; counter < FIFO_SIZE - 1; counter = counter + 1)
                             fifo_data[counter] <= fifo_data[counter + 1];
                         fifo_data[FIFO_SIZE - 1] <= 0;
