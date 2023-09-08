@@ -78,6 +78,16 @@ module fifo #
                 end
                 OPERATION_AWAITING:
                 begin
+                    popped_last_value <= position == 0;
+                    if(data_count == FIFO_SIZE)
+                    begin
+                        pushed_last_value <= 1;
+                    end
+                    else
+                    begin
+                        pushed_last_value <= 0;
+                    end
+                    // push have more priority
                     if (push == 1'b1)
                     begin
                         fifo_state <= PUSH_STARTED;
@@ -95,14 +105,6 @@ module fifo #
                         fifo_data[position] <= in_data;
                         position <= position + 1;    // position is an index of next item ...
                         data_count <= data_count + 1;
-                        if(data_count == FIFO_SIZE)
-                        begin
-                            pushed_last_value <= 1;
-                        end
-                        else
-                        begin
-                            pushed_last_value <= 0;
-                        end
                     end
                     if (push == 1'b0)
                     begin
@@ -124,7 +126,6 @@ module fifo #
                             fifo_data[counter] <= fifo_data[counter + 1];
                         fifo_data[FIFO_SIZE - 1] <= 0;
                         position <= position - 1;
-                        popped_last_value <= position == 0;
                     end
                     else
                     begin
