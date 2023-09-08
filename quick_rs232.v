@@ -59,8 +59,7 @@ module quick_rs232 #(
     input wire [DEFAULT_BYTE_LEN-1:0] tx_data,           // data that should be send trough RS232
     input wire tx_data_ready,                            // required: setting to 1 when new data is ready to send
     output reg tx_data_copied,                           // short pulse means that data was copied _--_____--______--___
-    output reg tx_busy,                                  // tx notes that data is sending via RS232 or RS232 module awaiting flow-control synch
-    output reg [7:0] debug_led_bus
+    output reg tx_busy                                   // tx notes that data is sending via RS232 or RS232 module awaiting flow-control synch
 );
 
 localparam reg [3:0] IDLE_EXCHANGE_STATE = 1;
@@ -90,7 +89,7 @@ reg tx_data_parity;
 reg [DEFAULT_BYTE_LEN-1:0] rx_buffer;
 wire rx_data_buffer_full;
 reg [31:0] rx_bit_counter;
-reg [31:0] rx_stop_bit_counter_limit;
+// reg [31:0] rx_stop_bit_counter_limit;
 reg [31:0] rx_timeout;
 reg [3:0]  rx_data_bit_counter;
 reg rx_data_parity;
@@ -117,7 +116,7 @@ begin
         rx_byte_received <= 1'b0;
         rx_buffer <= 0;
         rx_bit_counter <= 0;
-        rx_stop_bit_counter_limit <= 0;
+        // rx_stop_bit_counter_limit <= 0;
         rx_data_bit_counter <= 0;
         rx_data_parity <= 1'b0;
         rx_err <= 1'b0;
@@ -126,7 +125,6 @@ begin
         j <= 0;
         TOTAL_RX_TIMEOUT <= 6400; // ~ 9600 bit/s
         rx_timeout <= 0;
-        debug_led_bus <= 8'b11111111;
     end
     else
     begin
@@ -213,7 +211,7 @@ begin
                     if (rx_bit_counter == TICKS_PER_UART_BIT)
                     begin
                         rx_bit_counter <= 0;
-                        rx_data_bit_counter <= rx_data_bit_counter + 1;
+                        rx_data_bit_counter <= rx_data_bit_counter + 4'b0001;
                     end
                 end
             end
@@ -419,7 +417,7 @@ begin
                 if (tx_bit_counter == TICKS_PER_UART_BIT)
                 begin
                     tx_bit_counter <= 0;
-                    tx_data_bit_counter <= tx_data_bit_counter + 1;
+                    tx_data_bit_counter <= tx_data_bit_counter + 4'b0001;
                 end
                 end
             end

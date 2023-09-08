@@ -25,9 +25,9 @@ module fifo #
 )
 (
     input wire  clk,
-    //input wire  enable,
+    // input wire  enable,
     input wire  clear,
-    output wire fifo_ready,
+    // output wire fifo_ready,
     input wire  push,
     input wire  pop,
     input wire  [DATA_WIDTH - 1:0] in_data,
@@ -60,7 +60,7 @@ module fifo #
         if (clear == 1'b1)
         begin
             fifo_state = INITIAL_STATE;
-            for(counter = 0; counter < FIFO_SIZE; counter = counter + 1)
+            for(counter = 0; counter < FIFO_SIZE; counter = counter + 16'h01)
                 fifo_data[counter] <= 0;
             position <= 0;
             data_count <= 0;    
@@ -111,8 +111,8 @@ module fifo #
                     if (data_count < FIFO_SIZE)
                     begin
                         fifo_data[position] <= in_data;
-                        position <= position + 1;    // position is an index of next item ...
-                        data_count <= data_count + 1;
+                        position <= position + 16'h01;    // position is an index of next item ...
+                        data_count <= data_count + 16'h01;
                         fifo_state <= PUSH_FINISHED;
                         popped_last_value <= 1'b0;
                         if (position == FIFO_SIZE - 1)
@@ -137,12 +137,12 @@ module fifo #
                     if (data_count > 0)
                     begin
                         buffer <= fifo_data[0];
-                        data_count <= data_count - 1;
+                        data_count <= data_count - 16'h01;
                         pushed_last_value <= 0;
-                        for(counter = 0; counter < FIFO_SIZE - 1; counter = counter + 1)
+                        for(counter = 0; counter < FIFO_SIZE - 1; counter = counter + 16'h01)
                             fifo_data[counter] <= fifo_data[counter + 1];
                         fifo_data[FIFO_SIZE - 1] <= 0;
-                        position <= position - 1;
+                        position <= position - 16'h01;
                         fifo_state <= POP_FINISHED;
                         pushed_last_value <= 1'b0;
                         if(position == 1)
