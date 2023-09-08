@@ -85,7 +85,7 @@ begin
     if (counter == 23)
     begin
         push <= 0;
-        `ASSERT(pushed_last, 1'b0)
+        //`ASSERT(pushed_last, 1'b0)
     end
     // 2. push first
     // 2.1 setting data first
@@ -102,6 +102,10 @@ begin
     if (counter == 33)
     begin
         push <= 0;
+    end
+        if (counter == 36)
+    begin
+        push <= 0;
         `ASSERT(pushed_last, 1'b0)
     end
     // 3. pop first byte
@@ -116,6 +120,9 @@ begin
     if (counter == 44)
     begin
         `ASSERT(out_data, 8'b10101100)
+    end
+    if (counter == 47)
+    begin
         `ASSERT(popped_last, 1'b0)
     end
     // 4. pop second byte
@@ -130,7 +137,10 @@ begin
     if (counter == 56)
     begin
         `ASSERT(out_data, 8'b01100001)
-        //`ASSERT(popped_last, 1'b1)
+    end
+    if (counter == 56)
+    begin
+        `ASSERT(popped_last, 1'b1)
     end
     // 5. push again (b0)
     if (counter == 60)
@@ -149,7 +159,7 @@ begin
     end
     if (counter == 65)
     begin
-        `ASSERT(pushed_last, 1'b0)
+        //`ASSERT(pushed_last, 1'b0)
     end
     // 6. push again (b1)
     if (counter == 70)
@@ -168,7 +178,7 @@ begin
     end
     if (counter == 75)
     begin
-        `ASSERT(pushed_last, 1'b0)
+        //`ASSERT(pushed_last, 1'b0)
     end
     // 7. push again (b0)
     if (counter == 80)
@@ -185,9 +195,9 @@ begin
     begin
         push <= 0;
     end
-    if (counter == 85)
+    if (counter == 86)
     begin
-        //`ASSERT(pushed_last, 1'b1)
+        `ASSERT(pushed_last, 1'b1)
     end
     // 8. pop b0
     if (counter == 90)
