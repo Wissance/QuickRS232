@@ -73,7 +73,7 @@ localparam reg [3:0] PARITY_REMANENCE_TIMEOUT_WAIT_STATE = 8;
 localparam reg [3:0] STOP_BITS_EXCHANGE_STATE = 9;
 localparam reg [3:0] SYNCH_STOP_EXCHANGE_STATE = 10;
 
-localparam reg [31:0] PARITY_ANALYZE_OFFSET = 16;
+localparam reg [31:0] PARITY_ANALYZE_OFFSET = 64;
 
 reg [31:0] TICKS_PER_UART_BIT;                           // = CLK_FREQ / DEFAULT_BAUD_RATE;
 reg [31:0] HALF_TICKS_PER_UART_BIT;                      // = TICKS_PER_UART_BIT / 2;
@@ -92,12 +92,13 @@ reg [31:0] rx_bit_counter;
 // reg [31:0] rx_stop_bit_counter_limit;
 reg [31:0] rx_timeout;
 reg [3:0]  rx_data_bit_counter;
-reg rx_data_parity;
+reg [3:0] rx_parity_counter;
 integer i;
 integer j;
 
 supply1 vcc;
 supply0 gnd;
+
 
 fifo #(.FIFO_SIZE(DEFAULT_RECV_BUFFER_LEN), .DATA_WIDTH(DEFAULT_BYTE_LEN)) 
 rx_data_buffer (.clk(clk), .clear(rst), .push(rx_byte_received), .pop(rx_read), 
@@ -118,13 +119,13 @@ begin
         rx_bit_counter <= 0;
         // rx_stop_bit_counter_limit <= 0;
         rx_data_bit_counter <= 0;
-        rx_data_parity <= 1'b0;
         rx_err <= 1'b0;
         TICKS_PER_UART_BIT <= CLK_TICKS_PER_RS232_BIT;
         HALF_TICKS_PER_UART_BIT <= CLK_TICKS_PER_RS232_BIT / 2;
         j <= 0;
         TOTAL_RX_TIMEOUT <= 6400; // ~ 9600 bit/s
         rx_timeout <= 0;
+        rx_parity_counter <= 4'b0000;
     end
     else
     begin
@@ -142,6 +143,7 @@ begin
             begin
                 rx_state <= SYNCH_WAIT_EXCHANGE_STATE;
                 cts <= 1'b0;
+                rx_parity_counter <= 4'b0000;
             end
             SYNCH_WAIT_EXCHANGE_STATE:
             begin
@@ -187,6 +189,7 @@ begin
                    rx_state <= DATA_BITS_EXCHANGE_STATE;
                    rx_bit_counter <= 0;
                    rx_data_bit_counter <= 0;
+                   rx_parity_counter <= 4'b0000;
                 end
             end
             DATA_BITS_EXCHANGE_STATE:
@@ -206,6 +209,8 @@ begin
                     if (rx_bit_counter == TICKS_PER_UART_BIT - 64)  // ensure that we read corrected bit value quite away from boards
                     begin
                         rx_buffer[rx_data_bit_counter] <= rx;
+                        if (rx == 1'b1)
+                            rx_parity_counter <= rx_parity_counter + 4'b0001;
                     end
                 
                     if (rx_bit_counter == TICKS_PER_UART_BIT)
@@ -245,11 +250,6 @@ begin
                         default:
                         begin
                             // using XOR in we have even value of 1, rx_data_parity is 1, otherwise - 0.
-                            rx_data_parity <= rx_buffer[0];
-                            for (j = 1; j < DEFAULT_BYTE_LEN; j = j + 1)
-                            begin
-                                rx_data_parity <= rx_data_parity ^ rx_buffer[j];
-                            end
                             rx_state <= PARITY_BIT_ANALYZE_STATE;
                         end
                     endcase
@@ -259,16 +259,36 @@ begin
             begin
                 if (DEFAULT_PARITY == `EVEN_PARITY)
                 begin
-                    if (rx_data_parity != rx)
+                    if (rx_parity_counter[0] == 1'b1)  // odd 1 counter
                     begin
-                        rx_err <= 1'b1; // 1
+                        if (rx == 1'b1)
+                            rx_err <= 1'b0;
+                        else
+                            rx_err <= 1'b1;
+                    end
+                    else                            // even 1 counter
+                    begin
+                        if (rx == 1'b0) 
+                            rx_err <= 1'b0;
+                        else
+                            rx_err <= 1'b1;
                     end
                 end
                 else
                 begin
-                    if (rx_data_parity != ~rx)
+                    if (rx_parity_counter[0] == 1'b1)  // odd 1 counter
                     begin
-                        rx_err <= 1'b1;  // 1
+                        if (rx == 1'b0)
+                            rx_err <= 1'b0;
+                        else
+                            rx_err <= 1'b1;
+                    end
+                    else                            // even 1 counter
+                    begin
+                        if (rx == 1'b1) 
+                            rx_err <= 1'b0;
+                        else
+                            rx_err <= 1'b1;
                     end
                 end
                 rx_state <= PARITY_REMANENCE_TIMEOUT_WAIT_STATE;
