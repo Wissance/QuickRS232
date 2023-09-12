@@ -2,7 +2,7 @@
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/wissance/QuickRS232?style=plastic) 
 ![GitHub issues](https://img.shields.io/github/issues/wissance/QuickRS232?style=plastic)
 ![GitHub Release Date](https://img.shields.io/github/release-date/wissance/QuickRS232?style=plastic)
-![GitHub release (latest by date)](https://img.shields.io/github/downloads/wissance/QuickRS232/v0.9/total?style=plastic)
+![GitHub release (latest by date)](https://img.shields.io/github/downloads/wissance/QuickRS232/v1.0/total?style=plastic)
 
 `QuickRS232` is a versatile `RS232` `FPGA` `Verilog` module with following features:
 * ***Internal data buffering*** with `FIFO` builtin in `RS232` with parametric `FIFO` depth;
