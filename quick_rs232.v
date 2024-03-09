@@ -339,7 +339,7 @@ begin
         tx_buffer <= 0;
         tx_bit_counter <= 0;
         tx <= 1'b1;                       // IDLE state
-        tx_data_bit_counter <= 1'b0;      // Data bit counter = 0
+        tx_data_bit_counter <= 4'b0000;   // Data bit counter = 0
         tx_data_parity <= 1'b0;
         tx_stop_bit_counter_limit <= 0;
         i <= 0;
@@ -406,7 +406,7 @@ begin
                     tx_buffer <= tx_data;
                     tx_data_copied <= 1'b1;
                     tx_busy <= 1'b1;
-                    tx_data_bit_counter <= 1'b0;      // Data bit counter = 0
+                    tx_data_bit_counter <=4'b0000;      // Data bit counter = 0
                 end
                 if (tx_transaction == 1'b0)
                 begin
@@ -417,9 +417,10 @@ begin
             begin
                 tx <= 1'b0;
                 tx_bit_counter <= tx_bit_counter + 1;
-                if (tx_bit_counter == TICKS_PER_UART_BIT)
+                if (tx_bit_counter >= TICKS_PER_UART_BIT)
                 begin
                     tx_bit_counter <= 0;
+                    tx_data_bit_counter <= 0;
                     tx_state <= DATA_BITS_EXCHANGE_STATE;
                 end
             end
@@ -432,13 +433,21 @@ begin
                 end
                 else
                 begin
-                tx <= tx_buffer[tx_data_bit_counter];
-                tx_bit_counter <= tx_bit_counter + 1;
-                if (tx_bit_counter == TICKS_PER_UART_BIT)
-                begin
-                    tx_bit_counter <= 0;
-                    tx_data_bit_counter <= tx_data_bit_counter + 4'b0001;
-                end
+                    tx <= tx_buffer[tx_data_bit_counter];
+                    tx_bit_counter <= tx_bit_counter + 1;
+                    if (tx_bit_counter >= TICKS_PER_UART_BIT)
+                    begin
+                        tx_bit_counter <= 0;
+                        tx_data_bit_counter <= tx_data_bit_counter + 4'b0001;
+                        if (tx_data_bit_counter == 0)
+                        begin
+                           tx_data_parity <= tx_buffer[0];
+                        end
+                        else
+                        begin
+                            tx_data_parity <= tx_data_parity ^ tx_buffer[tx_data_bit_counter];
+                        end
+                    end
                 end
             end
             PARITY_BIT_EXCHANGE_STATE:
@@ -458,12 +467,26 @@ begin
                         begin
                             tx <= 1'b0;
                         end
-                        default:
+                        `EVEN_PARITY:
                         begin
-                            tx_data_parity <= tx_buffer[0];
-                            for (i = 1; i < DEFAULT_BYTE_LEN; i = i + 1)
+                            if (tx_data_parity == 1'b1)
                             begin
-                                tx_data_parity <= tx_data_parity ^ tx_buffer[i];
+                                tx <= 1'b1;
+                            end
+                            else
+                            begin
+                                tx <= 1'b0;
+                            end
+                        end
+                        `ODD_PARITY:
+                        begin
+                            if (tx_data_parity == 1'b1)
+                            begin
+                                tx <= 1'b0;
+                            end
+                            else
+                            begin
+                                tx <= 1'b1;
                             end
                         end
                     endcase
@@ -490,7 +513,7 @@ begin
             begin
                 tx <= 1'b1;
                 tx_bit_counter <= tx_bit_counter + 1;
-                if (tx_bit_counter == tx_stop_bit_counter_limit)
+                if (tx_bit_counter >= tx_stop_bit_counter_limit)
                 begin
                     tx_bit_counter <= 0;
                     tx_state <= SYNCH_STOP_EXCHANGE_STATE;
