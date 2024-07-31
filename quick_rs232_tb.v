@@ -49,6 +49,7 @@ wire tx_busy;
 reg [31:0] counter;
 
 localparam reg[31:0] RS232_BIT_TICKS = 434; // 115200 bit/s at 50 MHz
+localparam reg[31:0] EXCHANGE_OFFSET = 100;
 
 quick_rs232 #(.CLK_TICKS_PER_RS232_BIT(RS232_BIT_TICKS), .DEFAULT_BYTE_LEN(8), .DEFAULT_PARITY(1), .DEFAULT_STOP_BITS(0),
               .DEFAULT_RECV_BUFFER_LEN(16), .DEFAULT_FLOW_CONTROL(0)) 
@@ -80,91 +81,92 @@ begin
     counter <= counter + 1;
     // 1. RX (reading byte without an error)
     // 1.1 Sending Start bit
-    if (counter == 100)
+    if (counter == EXCHANGE_OFFSET)
     begin
         rx <= 1'b0;
     end
     // 1.2 Sending Data bits 8'b01010011
     // b0
-    if (counter == 2 * RS232_BIT_TICKS + 100)  // we multiply on 2 because counter changes twice a period
+    if (counter == 2 * 1 * RS232_BIT_TICKS + EXCHANGE_OFFSET)  // we multiply on 2 because counter changes twice a period
     begin
        rx <= 1'b1;
     end
     // b1
-    if (counter == 2 * 2 * RS232_BIT_TICKS + 100)
+    if (counter == 2 * 2 * RS232_BIT_TICKS + EXCHANGE_OFFSET)
     begin
        rx <= 1'b1;
     end
     // b2
-    if (counter == 2 * 3 * RS232_BIT_TICKS + 100)
+    if (counter == 2 * 3 * RS232_BIT_TICKS + EXCHANGE_OFFSET)
     begin
        rx <= 1'b0;
     end
     // b3
-    if (counter == 2 * 4 * RS232_BIT_TICKS + 100)
+    if (counter == 2 * 4 * RS232_BIT_TICKS + EXCHANGE_OFFSET)
     begin
        rx <= 1'b0;
     end
     // b4
-    if (counter == 2 * 5 * RS232_BIT_TICKS + 100)
+    if (counter == 2 * 5 * RS232_BIT_TICKS + EXCHANGE_OFFSET)
     begin
        rx <= 1'b1;
     end
     // b5
-    if (counter == 2 * 6 * RS232_BIT_TICKS + 100)
+    if (counter == 2 * 6 * RS232_BIT_TICKS + EXCHANGE_OFFSET)
     begin
        rx <= 1'b0;
     end
     // b6
-    if (counter == 2 * 7 * RS232_BIT_TICKS + 100)
+    if (counter == 2 * 7 * RS232_BIT_TICKS + EXCHANGE_OFFSET)
     begin
        rx <= 1'b1;
     end
     // b7
-    if (counter == 2 * 8 * RS232_BIT_TICKS + 100)
+    if (counter == 2 * 8 * RS232_BIT_TICKS + EXCHANGE_OFFSET)
     begin
        rx <= 1'b0;
     end
     // 1.3 Sending Parity (even)
-    if (counter == 2 * 9 * RS232_BIT_TICKS + 100)
+    if (counter == 2 * 9 * RS232_BIT_TICKS + EXCHANGE_OFFSET)
     begin
        rx <= 1'b0;
     end
     // 1.4 Sending Stop bit
-    if (counter == 2 * 10 * RS232_BIT_TICKS + 100)
+    if (counter == 2 * 10 * RS232_BIT_TICKS + EXCHANGE_OFFSET)
     begin
        rx <= 1'b1;
     end
     // 1.5 ASSERT on first byte
-    if (counter > 2 * 8 * RS232_BIT_TICKS + 100 && counter < 2 * 10 * RS232_BIT_TICKS + 100)
+    if (counter > 2 * 8 * RS232_BIT_TICKS + EXCHANGE_OFFSET && 
+        counter < 2 * 10 * RS232_BIT_TICKS + EXCHANGE_OFFSET)
     begin
         `ASSERT(rx_err, 1'b0)
-    end
-    if (counter == 2 * 10 * RS232_BIT_TICKS + 200)
+    end 
+    if (counter == 2 * 10 * RS232_BIT_TICKS + 2 * EXCHANGE_OFFSET)
     begin
         rx_read <= 1;
     end
-    if (counter == 2 * 10 * RS232_BIT_TICKS + 200 + 2)
+    if (counter == 2 * 10 * RS232_BIT_TICKS + 2 * EXCHANGE_OFFSET + 2)
     begin
         rx_read <= 0;
     end
-    if (counter == 2 * 10 * RS232_BIT_TICKS + 200 + 10)
+    if (counter == 2 * 10 * RS232_BIT_TICKS + 2 * EXCHANGE_OFFSET + 10)
     begin
         `ASSERT(rx_data, 8'b01010011)
     end
-    if (counter == 2 * 10 * RS232_BIT_TICKS + 300)
+    if (counter == 2 * 10 * RS232_BIT_TICKS + 3 * EXCHANGE_OFFSET)
     begin
         rx_read <= 0;
     end
     // 2. Reading next byte
     // 2.1 Sending Start
-    if (counter == 2 * 15* RS232_BIT_TICKS)
+    if (counter == 2 * 15 * RS232_BIT_TICKS)
     begin
         rx <= 1'b0;
     end
     // 2.2 Sending Data bits 8'b10010100
     // b0
-    if (counter == 2 * 16* RS232_BIT_TICKS)  // we multiply on 2 because counter changes twice a period
+    if (counter == 2 * 16 * RS232_BIT_TICKS)  // we multiply on 2 because counter changes twice a period
     begin
        rx <= 1'b0;
     end
@@ -216,15 +218,11 @@ begin
     // 2.5 ASSERT on first byte
     if (counter > 2 * 23 * RS232_BIT_TICKS&& counter < 2 * 25 * RS232_BIT_TICKS)
     begin
-        //`ASSERT(rx_err, 1'b0)
+        `ASSERT(rx_err, 1'b0)
     end
     if (counter == 2 * 26 * RS232_BIT_TICKS)
     begin
         rx_read <= 1;
-    end
-    if (counter == 2 * 26 * RS232_BIT_TICKS + 2)
-    begin
-        //`ASSERT(rx_data, 8'b10010100)
     end
     if (counter == 2 * 26 * RS232_BIT_TICKS + 52)
     begin
@@ -245,6 +243,79 @@ begin
     if (counter == 2 * 23 * RS232_BIT_TICKS)
     begin
         tx_transaction <= 0;
+    end
+
+    // 4 Sending all zeroes 0x00
+    // 4.1 Sending Start bit
+    if (counter == 2 * 40 * RS232_BIT_TICKS + EXCHANGE_OFFSET)
+    begin
+        rx <= 1'b0;
+    end
+    // 4.2 Sending Data bits 8'b01010011
+    // b0
+    if (counter == 2 * 41 * RS232_BIT_TICKS + EXCHANGE_OFFSET)  // we multiply on 2 because counter changes twice a period
+    begin
+       rx <= 1'b0;
+    end
+    // b1
+    if (counter == 2 * 42 * RS232_BIT_TICKS + EXCHANGE_OFFSET)
+    begin
+       rx <= 1'b0;
+    end
+    // b2
+    if (counter == 2 * 43 * RS232_BIT_TICKS + EXCHANGE_OFFSET)
+    begin
+       rx <= 1'b0;
+    end
+    // b3
+    if (counter == 2 * 44 * RS232_BIT_TICKS + EXCHANGE_OFFSET)
+    begin
+       rx <= 1'b0;
+    end
+    // b4
+    if (counter == 2 * 45 * RS232_BIT_TICKS + EXCHANGE_OFFSET)
+    begin
+       rx <= 1'b0;
+    end
+    // b5
+    if (counter == 2 * 46 * RS232_BIT_TICKS + EXCHANGE_OFFSET)
+    begin
+       rx <= 1'b0;
+    end
+    // b6
+    if (counter == 2 * 47 * RS232_BIT_TICKS + EXCHANGE_OFFSET)
+    begin
+       rx <= 1'b0;
+    end
+    // b7
+    if (counter == 2 * 48 * RS232_BIT_TICKS + EXCHANGE_OFFSET)
+    begin
+       rx <= 1'b0;
+    end
+    // 4.3 Sending Parity (even)
+    if (counter == 2 * 49 * RS232_BIT_TICKS + EXCHANGE_OFFSET)
+    begin
+       rx <= 1'b0;
+    end
+    // 4.4 Sending Stop bit
+    if (counter == 2 * 50 * RS232_BIT_TICKS + EXCHANGE_OFFSET)
+    begin
+       rx <= 1'b1;
+    end
+    // 4.5 Asserting
+    if (counter > 2 * 49 * RS232_BIT_TICKS&& counter < 2 * 53 * RS232_BIT_TICKS)
+    begin
+        `ASSERT(rx_err, 1'b0)
+    end
+    // 4.6 Read 0x00 and ASSERT
+    if (counter == 2 * 52 * RS232_BIT_TICKS + EXCHANGE_OFFSET)
+    begin
+        rx_read <= 1;
+    end
+    if (counter == 2 * 52 * RS232_BIT_TICKS + EXCHANGE_OFFSET + 50)
+    begin
+        rx_read <= 0;
+        `ASSERT(rx_data, 8'b00000000)
     end
 end
 
